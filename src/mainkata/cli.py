@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from mainkata.services.generator import generate_from_inputs
+from mainkata.services.generator import generate_from_inputs, resolve_output_path
 
 
 def main() -> None:
@@ -54,20 +54,27 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # If user supplied an explicit output, check for overwrite
+    csv_path = Path(args.csv_file).expanduser().resolve()
+
+    # Determine the intended output path (explicit or default)
     if args.output:
         out_path = Path(args.output).expanduser().resolve()
-        if out_path.exists() and not args.force:
-            parser.exit(
-                1,
-                f"Error: Output file already exists: {out_path}\n"
-                "Use --force to overwrite.\n",
-            )
+    else:
+        # Use the same default logic as the generator
+        out_path = resolve_output_path(csv_path, None)
+
+    # Overwrite guard for both explicit and default outputs
+    if out_path.exists() and not args.force:
+        parser.exit(
+            1,
+            f"Error: Output file already exists: {out_path}\n"
+            "Use --force to overwrite.\n",
+        )
 
     try:
         pptx_path, csv_out = generate_from_inputs(
-            csv_file=args.csv_file,
-            output=args.output,
+            csv_file=csv_path,
+            output=out_path,
             set_count=args.sets,
             set_size=args.set_size,
             seed=args.seed,
