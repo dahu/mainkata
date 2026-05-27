@@ -48,6 +48,30 @@ python3 -m pipx ensurepath
 pipx install "git+https://github.com/dahu/mainkata"
 ```
 
+### macOS quick start (for non-technical users)
+
+1. Install Python 3 from [python.org](https://www.python.org/downloads/macos/) using the macOS installer.
+2. Open the Terminal app and run:
+
+   ```bash
+   python3 -m pip install --user pipx
+   python3 -m pipx ensurepath
+   ```
+
+   Then close and reopen Terminal.
+
+3. Install Mainkata:
+
+   ```bash
+   pipx install "git+https://github.com/dahu/mainkata"
+   ```
+
+4. Launch the desktop app:
+
+   ```bash
+   mainkata-gui
+   ```
+
 ### macOS
 
 If you use Homebrew:
