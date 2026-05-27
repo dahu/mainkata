@@ -3,14 +3,13 @@ name = "mainkata"
 version = "0.1.0"
 description = "Generate classroom game slides from CSV rows."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
   "python-pptx",
-  "tkinter",
 ]
 
 [project.scripts]
-mainkata = "mainkata.cli:app"
+mainkata = "mainkata.cli:main"
 
 [project.gui-scripts]
 mainkata-gui = "mainkata.gui:main"

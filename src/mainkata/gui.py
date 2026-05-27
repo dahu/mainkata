@@ -6,13 +6,14 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from generator import generate_from_inputs, resolve_output_path
+from mainkata.services.generator import (generate_from_inputs,
+                                         resolve_output_path)
 
 
 class VocabPptxGui(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Term-definition PPTX generator")
+        self.title("Mainkata: Term-Definition PPTX Generator")
         self.geometry("760x560")
         self.minsize(720, 500)
 

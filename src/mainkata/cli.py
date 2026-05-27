@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.mainkata.services.generator import generate_from_inputs
+from mainkata.services.generator import generate_from_inputs
 
 
 def main() -> None:
