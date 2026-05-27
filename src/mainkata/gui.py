@@ -6,7 +6,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from generate import generate_from_inputs, resolve_output_path
+from generator import generate_from_inputs, resolve_output_path
 
 
 class VocabPptxGui(tk.Tk):
