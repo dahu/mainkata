@@ -4,7 +4,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from mainkata.services.generator import generate_from_inputs, resolve_output_path
+from mainkata.services.generator import (generate_from_inputs,
+                                         resolve_output_path)
 
 
 def main() -> None:
@@ -47,6 +48,73 @@ def main() -> None:
         action="store_true",
         help="Hide the alternate side from the slide instead of showing it in smaller text",
     )
+
+    parser.add_argument(
+        "--background-dir",
+        help=(
+            "Optional directory containing background image files "
+            "(.png, .jpg, .jpeg)"
+        ),
+    )
+    parser.add_argument(
+        "--background-mode",
+        choices=["fixed", "cycle"],
+        default="cycle",
+        help=(
+            "How to use multiple background images: "
+            "'fixed' uses one nominated image for all slides; "
+            "'cycle' rotates through images (default: cycle)"
+        ),
+    )
+    parser.add_argument(
+        "--background-image-number",
+        type=int,
+        help=(
+            "1-based image number to use when --background-mode=fixed; "
+            "for example, 1 means the first image in sorted order"
+        ),
+    )
+    parser.add_argument(
+        "--background-cycle-start",
+        type=int,
+        help=(
+            "1-based first image number to use when --background-mode=cycle; "
+            "must be used together with --background-cycle-end"
+        ),
+    )
+    parser.add_argument(
+        "--background-cycle-end",
+        type=int,
+        help=(
+            "1-based last image number to use when --background-mode=cycle; "
+            "must be used together with --background-cycle-start"
+        ),
+    )
+
+    parser.add_argument(
+        "--overlay-transparency",
+        type=float,
+        default=0.22,
+        help=(
+            "Transparency for the title-slide soft overlay when using background images "
+            "(0.0 = opaque, 1.0 = fully transparent; default: 0.22)"
+        ),
+    )
+    parser.add_argument(
+        "--hide-vocab-card",
+        action="store_true",
+        help="Do not draw the white rounded card on vocab slides",
+    )
+    parser.add_argument(
+        "--vocab-card-transparency",
+        type=float,
+        default=0.18,
+        help=(
+            "Transparency for the vocab-slide white card "
+            "(0.0 = opaque, 1.0 = fully transparent; default: 0.18)"
+        ),
+    )
+
     parser.add_argument(
         "--force",
         action="store_true",
@@ -56,14 +124,11 @@ def main() -> None:
 
     csv_path = Path(args.csv_file).expanduser().resolve()
 
-    # Determine the intended output path (explicit or default)
     if args.output:
         out_path = Path(args.output).expanduser().resolve()
     else:
-        # Use the same default logic as the generator
         out_path = resolve_output_path(csv_path, None)
 
-    # Overwrite guard for both explicit and default outputs
     if out_path.exists() and not args.force:
         parser.exit(
             1,
@@ -81,6 +146,14 @@ def main() -> None:
             primary_side=args.primary_side,
             show_alternate=not args.hide_alternate,
             export_selected_terms=args.export_selected_terms,
+            background_dir=args.background_dir,
+            background_mode=args.background_mode,
+            background_image_number=args.background_image_number,
+            background_cycle_start=args.background_cycle_start,
+            background_cycle_end=args.background_cycle_end,
+            overlay_transparency=args.overlay_transparency,
+            show_vocab_card=not args.hide_vocab_card,
+            vocab_card_transparency=args.vocab_card_transparency,
         )
     except Exception as exc:
         parser.exit(1, f"Error: {exc}\n")

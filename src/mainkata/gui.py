@@ -14,8 +14,8 @@ class VocabPptxGui(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Mainkata: Term-Definition PPTX Generator")
-        self.geometry("760x560")
-        self.minsize(720, 500)
+        self.geometry("780x820")
+        self.minsize(740, 680)
 
         self.csv_path_var = tk.StringVar()
         self.output_var = tk.StringVar()
@@ -25,6 +25,17 @@ class VocabPptxGui(tk.Tk):
         self.primary_side_var = tk.StringVar(value="term")
         self.show_alternate_var = tk.BooleanVar(value=True)
         self.export_selected_terms_var = tk.BooleanVar(value=False)
+
+        self.background_dir_var = tk.StringVar()
+        self.background_mode_var = tk.StringVar(value="cycle")
+        self.background_image_number_var = tk.StringVar()
+        self.background_cycle_start_var = tk.StringVar()
+        self.background_cycle_end_var = tk.StringVar()
+
+        self.overlay_transparency_var = tk.StringVar(value="0.22")
+        self.show_vocab_card_var = tk.BooleanVar(value=True)
+        self.vocab_card_transparency_var = tk.StringVar(value="0.18")
+
         self.status_var = tk.StringVar(value="Choose a CSV file to begin.")
 
         self._build_ui()
@@ -102,23 +113,119 @@ class VocabPptxGui(tk.Tk):
             variable=self.export_selected_terms_var,
         ).grid(row=7, column=0, columnspan=3, sticky="w", pady=6)
 
+        ttk.Separator(root).grid(row=8, column=0, columnspan=3, sticky="ew", pady=12)
+
+        ttk.Label(root, text="Background image folder").grid(
+            row=9, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        ttk.Entry(root, textvariable=self.background_dir_var).grid(
+            row=9, column=1, sticky="ew", pady=8
+        )
+        ttk.Button(root, text="Browse…", command=self.choose_background_dir).grid(
+            row=9, column=2, sticky="ew", pady=8
+        )
+
+        ttk.Label(root, text="Background mode").grid(
+            row=10, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        self.background_mode_combo = ttk.Combobox(
+            root,
+            textvariable=self.background_mode_var,
+            values=["cycle", "fixed"],
+            state="readonly",
+            width=12,
+        )
+        self.background_mode_combo.grid(row=10, column=1, sticky="w", pady=8)
+        self.background_mode_combo.bind(
+            "<<ComboboxSelected>>", self._on_background_mode_changed
+        )
+
+        ttk.Label(root, text="Fixed image number").grid(
+            row=11, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        self.fixed_image_spinbox = ttk.Spinbox(
+            root,
+            from_=1,
+            to=9999,
+            textvariable=self.background_image_number_var,
+            width=10,
+        )
+        self.fixed_image_spinbox.grid(row=11, column=1, sticky="w", pady=8)
+
+        ttk.Label(root, text="Cycle image range").grid(
+            row=12, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        cycle_frame = ttk.Frame(root)
+        cycle_frame.grid(row=12, column=1, columnspan=2, sticky="w", pady=8)
+
+        self.cycle_start_spinbox = ttk.Spinbox(
+            cycle_frame,
+            from_=1,
+            to=9999,
+            textvariable=self.background_cycle_start_var,
+            width=8,
+        )
+        self.cycle_start_spinbox.pack(side="left")
+
+        ttk.Label(cycle_frame, text="to").pack(side="left", padx=8)
+
+        self.cycle_end_spinbox = ttk.Spinbox(
+            cycle_frame,
+            from_=1,
+            to=9999,
+            textvariable=self.background_cycle_end_var,
+            width=8,
+        )
+        self.cycle_end_spinbox.pack(side="left")
+
+        ttk.Label(root, text="Overlay transparency").grid(
+            row=13, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        self.overlay_transparency_entry = ttk.Entry(
+            root,
+            textvariable=self.overlay_transparency_var,
+            width=10,
+        )
+        self.overlay_transparency_entry.grid(row=13, column=1, sticky="w", pady=8)
+
+        ttk.Checkbutton(
+            root,
+            text="Show white card on vocab slides",
+            variable=self.show_vocab_card_var,
+            command=self._on_vocab_card_toggle,
+        ).grid(row=14, column=0, columnspan=3, sticky="w", pady=6)
+
+        ttk.Label(root, text="Vocab card transparency").grid(
+            row=15, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        self.vocab_card_transparency_entry = ttk.Entry(
+            root,
+            textvariable=self.vocab_card_transparency_var,
+            width=10,
+        )
+        self.vocab_card_transparency_entry.grid(row=15, column=1, sticky="w", pady=8)
+
         help_text = (
             "CSV must contain Term and Definition headers.\n"
             "Header matching is case-insensitive, and one CSV file is processed at a time.\n"
-            + "The file must also contain enough unique rows for the selected set size."
+            "The file must also contain enough unique rows for the selected set size.\n\n"
+            "Optional background folder: if one image is present it is used for all slides;\n"
+            "otherwise choose fixed or cycle mode. In cycle mode, leave the range blank to\n"
+            "cycle through all images, or provide both start and end image numbers.\n\n"
+            "Transparency values must be between 0.0 (opaque) and 1.0 (fully transparent)."
         )
         ttk.Label(root, text=help_text, justify="left").grid(
-            row=8, column=0, columnspan=3, sticky="w", pady=(12, 8)
+            row=16, column=0, columnspan=3, sticky="w", pady=(12, 8)
         )
 
         ttk.Button(root, text="Generate PPTX", command=self.generate).grid(
-            row=9, column=0, columnspan=3, sticky="ew", pady=(8, 12)
+            row=17, column=0, columnspan=3, sticky="ew", pady=(8, 12)
         )
 
-        ttk.Label(root, text="Status").grid(row=10, column=0, sticky="nw", pady=(4, 6))
+        ttk.Label(root, text="Status").grid(row=18, column=0, sticky="nw", pady=(4, 6))
         status_frame = ttk.Frame(root)
-        status_frame.grid(row=10, column=1, columnspan=2, sticky="nsew", pady=(4, 6))
-        root.rowconfigure(10, weight=1)
+        status_frame.grid(row=18, column=1, columnspan=2, sticky="nsew", pady=(4, 6))
+        root.rowconfigure(18, weight=1)
         status_frame.columnconfigure(0, weight=1)
         status_frame.rowconfigure(1, weight=1)
 
@@ -127,6 +234,9 @@ class VocabPptxGui(tk.Tk):
         )
         self.log = tk.Text(status_frame, height=10, wrap="word", state="disabled")
         self.log.grid(row=1, column=0, sticky="nsew")
+
+        self._on_background_mode_changed()
+        self._on_vocab_card_toggle()
 
     def _require_int(self, value: str, field_name: str) -> int:
         text = value.strip()
@@ -137,9 +247,44 @@ class VocabPptxGui(tk.Tk):
         except ValueError as exc:
             raise ValueError(f"{field_name} must be a whole number.") from exc
 
+    def _optional_int(self, value: str, field_name: str) -> int | None:
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            return int(text)
+        except ValueError as exc:
+            raise ValueError(f"{field_name} must be a whole number.") from exc
+
+    def _require_float(self, value: str, field_name: str) -> float:
+        text = value.strip()
+        if not text:
+            raise ValueError(f"{field_name} is required.")
+        try:
+            return float(text)
+        except ValueError as exc:
+            raise ValueError(f"{field_name} must be a number.") from exc
+
     def _validate_inputs(
         self,
-    ) -> tuple[str, str | None, int, int, int, str, bool, bool]:
+    ) -> tuple[
+        str,
+        str | None,
+        int,
+        int,
+        int,
+        str,
+        bool,
+        bool,
+        str | None,
+        str,
+        int | None,
+        int | None,
+        int | None,
+        float,
+        bool,
+        float,
+    ]:
         csv_file = self.csv_path_var.get().strip()
         if not csv_file:
             raise ValueError("Please choose a CSV file.")
@@ -152,12 +297,48 @@ class VocabPptxGui(tk.Tk):
         show_alternate = self.show_alternate_var.get()
         export_selected_terms = self.export_selected_terms_var.get()
 
+        background_dir = self.background_dir_var.get().strip() or None
+        background_mode = self.background_mode_var.get().strip() or "cycle"
+        background_image_number = self._optional_int(
+            self.background_image_number_var.get(),
+            "Fixed image number",
+        )
+        background_cycle_start = self._optional_int(
+            self.background_cycle_start_var.get(),
+            "Cycle start image number",
+        )
+        background_cycle_end = self._optional_int(
+            self.background_cycle_end_var.get(),
+            "Cycle end image number",
+        )
+
+        overlay_transparency = self._require_float(
+            self.overlay_transparency_var.get(),
+            "Overlay transparency",
+        )
+        show_vocab_card = self.show_vocab_card_var.get()
+        vocab_card_transparency = self._require_float(
+            self.vocab_card_transparency_var.get(),
+            "Vocab card transparency",
+        )
+
         if set_count < 1:
             raise ValueError("Sets must be at least 1.")
         if set_size < 1:
             raise ValueError("Set size must be at least 1.")
         if primary_side not in {"term", "definition"}:
             raise ValueError("Large text shows must be either Term or Definition.")
+        if background_mode not in {"fixed", "cycle"}:
+            raise ValueError("Background mode must be either fixed or cycle.")
+        if not 0.0 <= overlay_transparency <= 1.0:
+            raise ValueError("Overlay transparency must be between 0.0 and 1.0.")
+        if not 0.0 <= vocab_card_transparency <= 1.0:
+            raise ValueError("Vocab card transparency must be between 0.0 and 1.0.")
+
+        if background_dir is None:
+            background_image_number = None
+            background_cycle_start = None
+            background_cycle_end = None
 
         return (
             csv_file,
@@ -168,6 +349,14 @@ class VocabPptxGui(tk.Tk):
             primary_side,
             show_alternate,
             export_selected_terms,
+            background_dir,
+            background_mode,
+            background_image_number,
+            background_cycle_start,
+            background_cycle_end,
+            overlay_transparency,
+            show_vocab_card,
+            vocab_card_transparency,
         )
 
     def _validate_output_path(self, csv_file: str, output: str | None) -> Path:
@@ -186,6 +375,23 @@ class VocabPptxGui(tk.Tk):
             raise PermissionError(f"Output folder is not writable:\n{parent}")
 
         return output_path
+
+    def _on_background_mode_changed(self, event=None) -> None:
+        mode = self.background_mode_var.get().strip() or "cycle"
+        has_dir = bool(self.background_dir_var.get().strip())
+
+        fixed_state = "normal" if has_dir and mode == "fixed" else "disabled"
+        cycle_state = "normal" if has_dir and mode == "cycle" else "disabled"
+        overlay_state = "normal" if has_dir else "disabled"
+
+        self.fixed_image_spinbox.configure(state=fixed_state)
+        self.cycle_start_spinbox.configure(state=cycle_state)
+        self.cycle_end_spinbox.configure(state=cycle_state)
+        self.overlay_transparency_entry.configure(state=overlay_state)
+
+    def _on_vocab_card_toggle(self) -> None:
+        state = "normal" if self.show_vocab_card_var.get() else "disabled"
+        self.vocab_card_transparency_entry.configure(state=state)
 
     def choose_csv(self) -> None:
         filename = filedialog.askopenfilename(
@@ -216,6 +422,20 @@ class VocabPptxGui(tk.Tk):
         self.status_var.set("Output file selected.")
         self._append_log(f"Output: {filename}")
 
+    def choose_background_dir(self) -> None:
+        initial = self.background_dir_var.get().strip()
+        dirname = filedialog.askdirectory(
+            title="Choose background image folder",
+            initialdir=initial if initial else "",
+            mustexist=True,
+        )
+        if not dirname:
+            return
+        self.background_dir_var.set(dirname)
+        self.status_var.set("Background folder selected.")
+        self._append_log(f"Background folder: {dirname}")
+        self._on_background_mode_changed()
+
     def generate(self) -> None:
         self.status_var.set("Validating inputs...")
         try:
@@ -228,6 +448,14 @@ class VocabPptxGui(tk.Tk):
                 primary_side,
                 show_alternate,
                 export_selected_terms,
+                background_dir,
+                background_mode,
+                background_image_number,
+                background_cycle_start,
+                background_cycle_end,
+                overlay_transparency,
+                show_vocab_card,
+                vocab_card_transparency,
             ) = self._validate_inputs()
 
             output_path = self._validate_output_path(csv_file, output)
@@ -258,6 +486,30 @@ class VocabPptxGui(tk.Tk):
             self.status_var.set("Generating PPTX...")
             self._append_log(f"Generating: {output_path}")
 
+            if background_dir:
+                self._append_log(f"Background folder: {background_dir}")
+                self._append_log(f"Background mode: {background_mode}")
+                self._append_log(f"Overlay transparency: {overlay_transparency}")
+                if background_mode == "fixed" and background_image_number is not None:
+                    self._append_log(
+                        f"Fixed background image number: {background_image_number}"
+                    )
+                elif background_mode == "cycle":
+                    if (
+                        background_cycle_start is not None
+                        and background_cycle_end is not None
+                    ):
+                        self._append_log(
+                            "Cycle background image range: "
+                            f"{background_cycle_start} to {background_cycle_end}"
+                        )
+                    else:
+                        self._append_log("Cycle background image range: all images")
+
+            self._append_log(f"Show vocab card: {show_vocab_card}")
+            if show_vocab_card:
+                self._append_log(f"Vocab card transparency: {vocab_card_transparency}")
+
             pptx_path, csv_out = generate_from_inputs(
                 csv_file=csv_file,
                 output=str(output_path),
@@ -267,6 +519,14 @@ class VocabPptxGui(tk.Tk):
                 primary_side=primary_side,
                 show_alternate=show_alternate,
                 export_selected_terms=export_selected_terms,
+                background_dir=background_dir,
+                background_mode=background_mode,
+                background_image_number=background_image_number,
+                background_cycle_start=background_cycle_start,
+                background_cycle_end=background_cycle_end,
+                overlay_transparency=overlay_transparency,
+                show_vocab_card=show_vocab_card,
+                vocab_card_transparency=vocab_card_transparency,
             )
 
             self.status_var.set("Generation complete.")
@@ -307,7 +567,8 @@ class VocabPptxGui(tk.Tk):
             messagebox.showerror(
                 "Generation failed",
                 "Something went wrong while creating the PowerPoint.\n"
-                "Please check the CSV file and output location, then try again.",
+                "Please check the CSV file, background folder, and output location, "
+                "then try again.",
                 parent=self,
             )
 
