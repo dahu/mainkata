@@ -14,8 +14,8 @@ class VocabPptxGui(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Mainkata: Term-Definition PPTX Generator")
-        self.geometry("780x820")
-        self.minsize(740, 680)
+        self.geometry("780x940")
+        self.minsize(740, 760)
 
         self.csv_path_var = tk.StringVar()
         self.output_var = tk.StringVar()
@@ -32,7 +32,10 @@ class VocabPptxGui(tk.Tk):
         self.background_cycle_start_var = tk.StringVar()
         self.background_cycle_end_var = tk.StringVar()
 
-        self.overlay_transparency_var = tk.StringVar(value="0.22")
+        self.title_slide_overlay_transparency_var = tk.StringVar(value="0.22")
+        self.vocab_slide_overlay_transparency_var = tk.StringVar(value="0.22")
+        self.show_title_card_var = tk.BooleanVar(value=True)
+        self.title_card_transparency_var = tk.StringVar(value="0.18")
         self.show_vocab_card_var = tk.BooleanVar(value=True)
         self.vocab_card_transparency_var = tk.StringVar(value="0.18")
 
@@ -178,32 +181,63 @@ class VocabPptxGui(tk.Tk):
         )
         self.cycle_end_spinbox.pack(side="left")
 
-        ttk.Label(root, text="Overlay transparency").grid(
+        ttk.Label(root, text="Title-slide overlay transparency").grid(
             row=13, column=0, sticky="w", padx=(0, 10), pady=8
         )
-        self.overlay_transparency_entry = ttk.Entry(
+        self.title_slide_overlay_transparency_entry = ttk.Entry(
             root,
-            textvariable=self.overlay_transparency_var,
+            textvariable=self.title_slide_overlay_transparency_var,
             width=10,
         )
-        self.overlay_transparency_entry.grid(row=13, column=1, sticky="w", pady=8)
+        self.title_slide_overlay_transparency_entry.grid(
+            row=13, column=1, sticky="w", pady=8
+        )
+
+        ttk.Label(root, text="Vocab-slide overlay transparency").grid(
+            row=14, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        self.vocab_slide_overlay_transparency_entry = ttk.Entry(
+            root,
+            textvariable=self.vocab_slide_overlay_transparency_var,
+            width=10,
+        )
+        self.vocab_slide_overlay_transparency_entry.grid(
+            row=14, column=1, sticky="w", pady=8
+        )
+
+        ttk.Checkbutton(
+            root,
+            text="Show white card on title slides",
+            variable=self.show_title_card_var,
+            command=self._on_title_card_toggle,
+        ).grid(row=15, column=0, columnspan=3, sticky="w", pady=6)
+
+        ttk.Label(root, text="Title card transparency").grid(
+            row=16, column=0, sticky="w", padx=(0, 10), pady=8
+        )
+        self.title_card_transparency_entry = ttk.Entry(
+            root,
+            textvariable=self.title_card_transparency_var,
+            width=10,
+        )
+        self.title_card_transparency_entry.grid(row=16, column=1, sticky="w", pady=8)
 
         ttk.Checkbutton(
             root,
             text="Show white card on vocab slides",
             variable=self.show_vocab_card_var,
             command=self._on_vocab_card_toggle,
-        ).grid(row=14, column=0, columnspan=3, sticky="w", pady=6)
+        ).grid(row=17, column=0, columnspan=3, sticky="w", pady=6)
 
         ttk.Label(root, text="Vocab card transparency").grid(
-            row=15, column=0, sticky="w", padx=(0, 10), pady=8
+            row=18, column=0, sticky="w", padx=(0, 10), pady=8
         )
         self.vocab_card_transparency_entry = ttk.Entry(
             root,
             textvariable=self.vocab_card_transparency_var,
             width=10,
         )
-        self.vocab_card_transparency_entry.grid(row=15, column=1, sticky="w", pady=8)
+        self.vocab_card_transparency_entry.grid(row=18, column=1, sticky="w", pady=8)
 
         help_text = (
             "CSV must contain Term and Definition headers.\n"
@@ -215,17 +249,17 @@ class VocabPptxGui(tk.Tk):
             "Transparency values must be between 0.0 (opaque) and 1.0 (fully transparent)."
         )
         ttk.Label(root, text=help_text, justify="left").grid(
-            row=16, column=0, columnspan=3, sticky="w", pady=(12, 8)
+            row=19, column=0, columnspan=3, sticky="w", pady=(12, 8)
         )
 
         ttk.Button(root, text="Generate PPTX", command=self.generate).grid(
-            row=17, column=0, columnspan=3, sticky="ew", pady=(8, 12)
+            row=20, column=0, columnspan=3, sticky="ew", pady=(8, 12)
         )
 
-        ttk.Label(root, text="Status").grid(row=18, column=0, sticky="nw", pady=(4, 6))
+        ttk.Label(root, text="Status").grid(row=21, column=0, sticky="nw", pady=(4, 6))
         status_frame = ttk.Frame(root)
-        status_frame.grid(row=18, column=1, columnspan=2, sticky="nsew", pady=(4, 6))
-        root.rowconfigure(18, weight=1)
+        status_frame.grid(row=21, column=1, columnspan=2, sticky="nsew", pady=(4, 6))
+        root.rowconfigure(21, weight=1)
         status_frame.columnconfigure(0, weight=1)
         status_frame.rowconfigure(1, weight=1)
 
@@ -236,6 +270,7 @@ class VocabPptxGui(tk.Tk):
         self.log.grid(row=1, column=0, sticky="nsew")
 
         self._on_background_mode_changed()
+        self._on_title_card_toggle()
         self._on_vocab_card_toggle()
 
     def _require_int(self, value: str, field_name: str) -> int:
@@ -282,6 +317,9 @@ class VocabPptxGui(tk.Tk):
         int | None,
         int | None,
         float,
+        float,
+        bool,
+        float,
         bool,
         float,
     ]:
@@ -312,9 +350,18 @@ class VocabPptxGui(tk.Tk):
             "Cycle end image number",
         )
 
-        overlay_transparency = self._require_float(
-            self.overlay_transparency_var.get(),
-            "Overlay transparency",
+        title_slide_overlay_transparency = self._require_float(
+            self.title_slide_overlay_transparency_var.get(),
+            "Title-slide overlay transparency",
+        )
+        vocab_slide_overlay_transparency = self._require_float(
+            self.vocab_slide_overlay_transparency_var.get(),
+            "Vocab-slide overlay transparency",
+        )
+        show_title_card = self.show_title_card_var.get()
+        title_card_transparency = self._require_float(
+            self.title_card_transparency_var.get(),
+            "Title card transparency",
         )
         show_vocab_card = self.show_vocab_card_var.get()
         vocab_card_transparency = self._require_float(
@@ -330,8 +377,16 @@ class VocabPptxGui(tk.Tk):
             raise ValueError("Large text shows must be either Term or Definition.")
         if background_mode not in {"fixed", "cycle"}:
             raise ValueError("Background mode must be either fixed or cycle.")
-        if not 0.0 <= overlay_transparency <= 1.0:
-            raise ValueError("Overlay transparency must be between 0.0 and 1.0.")
+        if not 0.0 <= title_slide_overlay_transparency <= 1.0:
+            raise ValueError(
+                "Title-slide overlay transparency must be between 0.0 and 1.0."
+            )
+        if not 0.0 <= vocab_slide_overlay_transparency <= 1.0:
+            raise ValueError(
+                "Vocab-slide overlay transparency must be between 0.0 and 1.0."
+            )
+        if not 0.0 <= title_card_transparency <= 1.0:
+            raise ValueError("Title card transparency must be between 0.0 and 1.0.")
         if not 0.0 <= vocab_card_transparency <= 1.0:
             raise ValueError("Vocab card transparency must be between 0.0 and 1.0.")
 
@@ -354,7 +409,10 @@ class VocabPptxGui(tk.Tk):
             background_image_number,
             background_cycle_start,
             background_cycle_end,
-            overlay_transparency,
+            title_slide_overlay_transparency,
+            vocab_slide_overlay_transparency,
+            show_title_card,
+            title_card_transparency,
             show_vocab_card,
             vocab_card_transparency,
         )
@@ -387,7 +445,12 @@ class VocabPptxGui(tk.Tk):
         self.fixed_image_spinbox.configure(state=fixed_state)
         self.cycle_start_spinbox.configure(state=cycle_state)
         self.cycle_end_spinbox.configure(state=cycle_state)
-        self.overlay_transparency_entry.configure(state=overlay_state)
+        self.title_slide_overlay_transparency_entry.configure(state=overlay_state)
+        self.vocab_slide_overlay_transparency_entry.configure(state=overlay_state)
+
+    def _on_title_card_toggle(self) -> None:
+        state = "normal" if self.show_title_card_var.get() else "disabled"
+        self.title_card_transparency_entry.configure(state=state)
 
     def _on_vocab_card_toggle(self) -> None:
         state = "normal" if self.show_vocab_card_var.get() else "disabled"
@@ -453,7 +516,10 @@ class VocabPptxGui(tk.Tk):
                 background_image_number,
                 background_cycle_start,
                 background_cycle_end,
-                overlay_transparency,
+                title_slide_overlay_transparency,
+                vocab_slide_overlay_transparency,
+                show_title_card,
+                title_card_transparency,
                 show_vocab_card,
                 vocab_card_transparency,
             ) = self._validate_inputs()
@@ -489,7 +555,14 @@ class VocabPptxGui(tk.Tk):
             if background_dir:
                 self._append_log(f"Background folder: {background_dir}")
                 self._append_log(f"Background mode: {background_mode}")
-                self._append_log(f"Overlay transparency: {overlay_transparency}")
+                self._append_log(
+                    "Title-slide overlay transparency: "
+                    f"{title_slide_overlay_transparency}"
+                )
+                self._append_log(
+                    "Vocab-slide overlay transparency: "
+                    f"{vocab_slide_overlay_transparency}"
+                )
                 if background_mode == "fixed" and background_image_number is not None:
                     self._append_log(
                         f"Fixed background image number: {background_image_number}"
@@ -505,6 +578,10 @@ class VocabPptxGui(tk.Tk):
                         )
                     else:
                         self._append_log("Cycle background image range: all images")
+
+            self._append_log(f"Show title card: {show_title_card}")
+            if show_title_card:
+                self._append_log(f"Title card transparency: {title_card_transparency}")
 
             self._append_log(f"Show vocab card: {show_vocab_card}")
             if show_vocab_card:
@@ -524,7 +601,10 @@ class VocabPptxGui(tk.Tk):
                 background_image_number=background_image_number,
                 background_cycle_start=background_cycle_start,
                 background_cycle_end=background_cycle_end,
-                overlay_transparency=overlay_transparency,
+                title_slide_overlay_transparency=title_slide_overlay_transparency,
+                vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
+                show_title_card=show_title_card,
+                title_card_transparency=title_card_transparency,
                 show_vocab_card=show_vocab_card,
                 vocab_card_transparency=vocab_card_transparency,
             )

@@ -133,11 +133,21 @@ def validate_background_options(
 
 
 def validate_visual_options(
-    overlay_transparency: float,
+    title_slide_overlay_transparency: float,
+    vocab_slide_overlay_transparency: float,
+    title_card_transparency: float,
     vocab_card_transparency: float,
 ) -> None:
-    if not 0.0 <= overlay_transparency <= 1.0:
-        raise ValueError("--overlay-transparency must be between 0.0 and 1.0.")
+    if not 0.0 <= title_slide_overlay_transparency <= 1.0:
+        raise ValueError(
+            "--title-slide-overlay-transparency must be between 0.0 and 1.0."
+        )
+    if not 0.0 <= vocab_slide_overlay_transparency <= 1.0:
+        raise ValueError(
+            "--vocab-slide-overlay-transparency must be between 0.0 and 1.0."
+        )
+    if not 0.0 <= title_card_transparency <= 1.0:
+        raise ValueError("--title-card-transparency must be between 0.0 and 1.0.")
     if not 0.0 <= vocab_card_transparency <= 1.0:
         raise ValueError("--vocab-card-transparency must be between 0.0 and 1.0.")
 
@@ -374,19 +384,49 @@ def apply_slide_background(prs, slide, bg_image: Path | None = None):
         add_default_background(slide)
 
 
+def add_title_card(slide):
+    card = slide.shapes.add_shape(
+        MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
+        Inches(0.7),
+        Inches(0.9),
+        Inches(11.9),
+        Inches(4.9),
+    )
+    card.fill.solid()
+    card.fill.fore_color.rgb = WHITE
+    card.line.color.rgb = BLUE
+    card.line.transparency = 0.85
+    return card
+
+
 def add_title_slide(
     prs,
     set_label: str,
     section_title: str,
     source_name: str,
     bg_image: Path | None = None,
-    overlay_transparency: float = 0.22,
+    title_slide_overlay_transparency: float = 0.22,
+    show_title_card: bool = True,
+    title_card_transparency: float = 0.18,
 ):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     apply_slide_background(prs, slide, bg_image)
 
     if bg_image is not None:
-        add_soft_overlay(prs, slide, transparency=overlay_transparency)
+        add_soft_overlay(prs, slide, transparency=title_slide_overlay_transparency)
+
+    text_left = Inches(0.9)
+    text_top = Inches(1.45)
+    text_width = Inches(11.0)
+    text_height = Inches(3.9)
+
+    if show_title_card:
+        card = add_title_card(slide)
+        set_shape_fill_transparency(card, title_card_transparency)
+        text_left = Inches(1.1)
+        text_top = Inches(1.55)
+        text_width = Inches(10.6)
+        text_height = Inches(3.5)
 
     pill = slide.shapes.add_shape(
         MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
@@ -411,7 +451,7 @@ def add_title_slide(
     run.font.size = Pt(16)
     run.font.color.rgb = BLUE
 
-    box = slide.shapes.add_textbox(Inches(0.9), Inches(1.45), Inches(11.0), Inches(2.6))
+    box = slide.shapes.add_textbox(text_left, text_top, text_width, text_height)
     tf = box.text_frame
     tf.word_wrap = True
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
@@ -462,14 +502,14 @@ def add_vocab_slide(
     secondary_text: str | None = None,
     bg_image: Path | None = None,
     show_vocab_card: bool = True,
-    overlay_transparency: float = 0.22,
+    vocab_slide_overlay_transparency: float = 0.22,
     vocab_card_transparency: float = 0.18,
 ):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     apply_slide_background(prs, slide, bg_image)
 
     if bg_image is not None:
-        add_soft_overlay(prs, slide, transparency=overlay_transparency)
+        add_soft_overlay(prs, slide, transparency=vocab_slide_overlay_transparency)
 
     text_left = Inches(1.1)
     text_top = Inches(1.55)
@@ -491,7 +531,6 @@ def add_vocab_slide(
         card.line.transparency = 0.85
 
     else:
-        # Give text slightly more room without the card
         text_left = Inches(0.9)
         text_top = Inches(1.2)
         text_width = Inches(11.5)
@@ -537,7 +576,10 @@ def build_pptx(
     background_image_number: int | None = None,
     background_cycle_start: int | None = None,
     background_cycle_end: int | None = None,
-    overlay_transparency: float = 0.22,
+    title_slide_overlay_transparency: float = 0.22,
+    vocab_slide_overlay_transparency: float = 0.22,
+    show_title_card: bool = True,
+    title_card_transparency: float = 0.18,
     show_vocab_card: bool = True,
     vocab_card_transparency: float = 0.18,
 ):
@@ -576,7 +618,9 @@ def build_pptx(
             f"{source_name} Vocabulary",
             csv_path.name,
             bg_image=title_bg,
-            overlay_transparency=overlay_transparency,
+            title_slide_overlay_transparency=title_slide_overlay_transparency,
+            show_title_card=show_title_card,
+            title_card_transparency=title_card_transparency,
         )
         generated_slide_index += 1
 
@@ -598,7 +642,7 @@ def build_pptx(
                 primary_text,
                 secondary_text,
                 bg_image=vocab_bg,
-                overlay_transparency=overlay_transparency,
+                vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
                 show_vocab_card=show_vocab_card,
                 vocab_card_transparency=vocab_card_transparency,
             )
@@ -632,7 +676,10 @@ def generate_from_inputs(
     background_image_number: int | None = None,
     background_cycle_start: int | None = None,
     background_cycle_end: int | None = None,
-    overlay_transparency: float = 0.22,
+    title_slide_overlay_transparency: float = 0.22,
+    vocab_slide_overlay_transparency: float = 0.22,
+    show_title_card: bool = True,
+    title_card_transparency: float = 0.18,
     show_vocab_card: bool = True,
     vocab_card_transparency: float = 0.18,
 ):
@@ -645,7 +692,9 @@ def generate_from_inputs(
         background_cycle_end=background_cycle_end,
     )
     validate_visual_options(
-        overlay_transparency=overlay_transparency,
+        title_slide_overlay_transparency=title_slide_overlay_transparency,
+        vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
+        title_card_transparency=title_card_transparency,
         vocab_card_transparency=vocab_card_transparency,
     )
 
@@ -666,7 +715,10 @@ def generate_from_inputs(
         background_image_number=background_image_number,
         background_cycle_start=background_cycle_start,
         background_cycle_end=background_cycle_end,
-        overlay_transparency=overlay_transparency,
+        title_slide_overlay_transparency=title_slide_overlay_transparency,
+        vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
+        show_title_card=show_title_card,
+        title_card_transparency=title_card_transparency,
         show_vocab_card=show_vocab_card,
         vocab_card_transparency=vocab_card_transparency,
     )

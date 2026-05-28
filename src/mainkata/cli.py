@@ -92,12 +92,35 @@ def main() -> None:
     )
 
     parser.add_argument(
-        "--overlay-transparency",
+        "--title-slide-overlay-transparency",
         type=float,
         default=0.22,
         help=(
             "Transparency for the title-slide soft overlay when using background images "
             "(0.0 = opaque, 1.0 = fully transparent; default: 0.22)"
+        ),
+    )
+    parser.add_argument(
+        "--vocab-slide-overlay-transparency",
+        type=float,
+        default=0.22,
+        help=(
+            "Transparency for the vocab-slide soft overlay when using background images "
+            "(0.0 = opaque, 1.0 = fully transparent; default: 0.22)"
+        ),
+    )
+    parser.add_argument(
+        "--hide-title-card",
+        action="store_true",
+        help="Do not draw the white rounded card on title slides",
+    )
+    parser.add_argument(
+        "--title-card-transparency",
+        type=float,
+        default=0.18,
+        help=(
+            "Transparency for the title-slide white card "
+            "(0.0 = opaque, 1.0 = fully transparent; default: 0.18)"
         ),
     )
     parser.add_argument(
@@ -151,7 +174,10 @@ def main() -> None:
             background_image_number=args.background_image_number,
             background_cycle_start=args.background_cycle_start,
             background_cycle_end=args.background_cycle_end,
-            overlay_transparency=args.overlay_transparency,
+            title_slide_overlay_transparency=args.title_slide_overlay_transparency,
+            vocab_slide_overlay_transparency=args.vocab_slide_overlay_transparency,
+            show_title_card=not args.hide_title_card,
+            title_card_transparency=args.title_card_transparency,
             show_vocab_card=not args.hide_vocab_card,
             vocab_card_transparency=args.vocab_card_transparency,
         )
