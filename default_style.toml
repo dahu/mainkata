@@ -1,0 +1,61 @@
+[labels]
+game_title = "Vocabulary Games"
+source_prefix = "Source:"
+set_prefix = "Set"
+vocabulary_suffix = "Vocabulary"
+
+[palettes.colors.default]
+bg = "#F0F7FF"
+blue = "#2563EB"
+text = "#0F172A"
+subtext = "#475569"
+coral = "#F97066"
+white = "#FFFFFF"
+
+[palettes.fonts.title_pill]
+name = "Aptos"
+size = 16
+bold = true
+
+[palettes.fonts.title_main]
+name = "Aptos Display"
+size = 28
+bold = true
+
+[palettes.fonts.title_section]
+name = "Aptos Display"
+size = 24
+bold = true
+
+[palettes.fonts.body]
+name = "Aptos"
+size = 16
+bold = false
+
+[palettes.fonts.vocab_primary]
+name = "Aptos Display"
+size = 24
+bold = true
+
+[palettes.fonts.vocab_secondary]
+name = "Aptos"
+size = 20
+bold = false
+
+[styles.title_slide]
+color_palette = "default"
+pill_font = "title_pill"
+main_font = "title_main"
+section_font = "title_section"
+body_font = "body"
+overlay_transparency = 0.22
+show_card = true
+card_transparency = 0.18
+
+[styles.vocab_slide]
+color_palette = "default"
+primary_font = "vocab_primary"
+secondary_font = "vocab_secondary"
+overlay_transparency = 0.22
+show_card = true
+card_transparency = 0.18

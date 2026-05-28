@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import csv
+import os
 import random
+from copy import deepcopy
 from pathlib import Path
-from typing import List, Literal, Tuple
+from typing import Any, Dict, List, Literal, Tuple
 
 from PIL import Image
 from pptx import Presentation
@@ -13,6 +15,11 @@ from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Inches, Pt
+
+try:
+    import tomllib  # Python 3.11+
+except ModuleNotFoundError:
+    import tomli as tomllib  # pip install tomli
 
 BG = RGBColor(240, 247, 255)
 BLUE = RGBColor(37, 99, 235)
@@ -26,6 +33,187 @@ PrimarySide = Literal["term", "definition"]
 BackgroundMode = Literal["fixed", "cycle"]
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
+
+DEFAULT_STYLE_CONFIG: Dict[str, Any] = {
+    "labels": {
+        "game_title": "Vocabulary Games",
+        "source_prefix": "Source:",
+        "set_prefix": "Set",
+        "vocabulary_suffix": "Vocabulary",
+    },
+    "palettes": {
+        "colors": {
+            "default": {
+                "bg": "#F0F7FF",
+                "blue": "#2563EB",
+                "text": "#0F172A",
+                "subtext": "#475569",
+                "coral": "#F97066",
+                "white": "#FFFFFF",
+            }
+        },
+        "fonts": {
+            "title_pill": {
+                "name": "Aptos",
+                "size": 16,
+                "bold": True,
+            },
+            "title_main": {
+                "name": "Aptos Display",
+                "size": 28,
+                "bold": True,
+            },
+            "title_section": {
+                "name": "Aptos Display",
+                "size": 24,
+                "bold": True,
+            },
+            "body": {
+                "name": "Aptos",
+                "size": 16,
+                "bold": False,
+            },
+            "vocab_primary": {
+                "name": "Aptos Display",
+                "size": 24,
+                "bold": True,
+            },
+            "vocab_secondary": {
+                "name": "Aptos",
+                "size": 20,
+                "bold": False,
+            },
+        },
+    },
+    "styles": {
+        "title_slide": {
+            "color_palette": "default",
+            "pill_font": "title_pill",
+            "main_font": "title_main",
+            "section_font": "title_section",
+            "body_font": "body",
+            "overlay_transparency": 0.22,
+            "show_card": True,
+            "card_transparency": 0.18,
+        },
+        "vocab_slide": {
+            "color_palette": "default",
+            "primary_font": "vocab_primary",
+            "secondary_font": "vocab_secondary",
+            "overlay_transparency": 0.22,
+            "show_card": True,
+            "card_transparency": 0.18,
+        },
+    },
+}
+
+
+def deep_merge_dicts(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            merged[key] = deep_merge_dicts(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def get_default_style_config_path() -> Path:
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if xdg_config_home:
+        config_home = Path(xdg_config_home).expanduser()
+    else:
+        config_home = Path.home() / ".config"
+    return config_home / "mainkata" / "style.toml"
+
+
+def resolve_style_config_path(
+    style_config_file: str | Path | None = None,
+) -> Path | None:
+    if style_config_file is not None:
+        config_path = Path(style_config_file).expanduser().resolve()
+        if not config_path.exists():
+            raise FileNotFoundError(f"Style config file not found: {config_path}")
+        if not config_path.is_file():
+            raise ValueError(f"Style config path is not a file: {config_path}")
+        return config_path
+
+    default_path = get_default_style_config_path().resolve()
+    if default_path.exists() and default_path.is_file():
+        return default_path
+
+    return None
+
+
+def load_style_config(style_config_file: str | Path | None = None) -> Dict[str, Any]:
+    config_path = resolve_style_config_path(style_config_file)
+    if config_path is None:
+        return deepcopy(DEFAULT_STYLE_CONFIG)
+
+    with config_path.open("rb") as f:
+        loaded = tomllib.load(f)
+
+    return deep_merge_dicts(DEFAULT_STYLE_CONFIG, loaded)
+
+
+def hex_to_rgb_color(value: str) -> RGBColor:
+    text = value.strip().lstrip("#")
+    if len(text) != 6:
+        raise ValueError(f"Invalid hex color: {value!r}")
+    try:
+        return RGBColor.from_string(text.upper())
+    except ValueError as exc:
+        raise ValueError(f"Invalid hex color: {value!r}") from exc
+
+
+def resolve_color_palette(
+    style_config: Dict[str, Any], palette_name: str
+) -> Dict[str, RGBColor]:
+    palettes = style_config["palettes"]["colors"]
+    if palette_name not in palettes:
+        raise ValueError(f"Unknown color palette: {palette_name}")
+    palette = palettes[palette_name]
+    return {key: hex_to_rgb_color(value) for key, value in palette.items()}
+
+
+def resolve_font_palette(
+    style_config: Dict[str, Any], font_name: str
+) -> Dict[str, Any]:
+    palettes = style_config["palettes"]["fonts"]
+    if font_name not in palettes:
+        raise ValueError(f"Unknown font palette: {font_name}")
+    font = palettes[font_name]
+    return {
+        "name": str(font["name"]),
+        "size": int(font["size"]),
+        "bold": bool(font["bold"]),
+    }
+
+
+def resolve_title_slide_style(style_config: Dict[str, Any]) -> Dict[str, Any]:
+    style = style_config["styles"]["title_slide"]
+    return {
+        "colors": resolve_color_palette(style_config, style["color_palette"]),
+        "pill_font": resolve_font_palette(style_config, style["pill_font"]),
+        "main_font": resolve_font_palette(style_config, style["main_font"]),
+        "section_font": resolve_font_palette(style_config, style["section_font"]),
+        "body_font": resolve_font_palette(style_config, style["body_font"]),
+        "overlay_transparency": float(style["overlay_transparency"]),
+        "show_card": bool(style["show_card"]),
+        "card_transparency": float(style["card_transparency"]),
+    }
+
+
+def resolve_vocab_slide_style(style_config: Dict[str, Any]) -> Dict[str, Any]:
+    style = style_config["styles"]["vocab_slide"]
+    return {
+        "colors": resolve_color_palette(style_config, style["color_palette"]),
+        "primary_font": resolve_font_palette(style_config, style["primary_font"]),
+        "secondary_font": resolve_font_palette(style_config, style["secondary_font"]),
+        "overlay_transparency": float(style["overlay_transparency"]),
+        "show_card": bool(style["show_card"]),
+        "card_transparency": float(style["card_transparency"]),
+    }
 
 
 def resolve_csv_path(csv_file: str | Path) -> Path:
@@ -329,14 +517,21 @@ def set_shape_fill_transparency(shape, transparency: float) -> None:
     color_node.append(alpha)
 
 
-def add_default_background(slide):
+def apply_font(run, font_spec: Dict[str, Any], color: RGBColor) -> None:
+    run.font.name = font_spec["name"]
+    run.font.size = Pt(font_spec["size"])
+    run.font.bold = font_spec["bold"]
+    run.font.color.rgb = color
+
+
+def add_default_background(slide, colors: Dict[str, RGBColor]):
     fill = slide.background.fill
     fill.solid()
-    fill.fore_color.rgb = BG
+    fill.fore_color.rgb = colors["bg"]
 
     for left, top, width, height, color in [
-        (Inches(-0.8), Inches(-0.6), Inches(2.6), Inches(2.2), BLUE),
-        (Inches(11.0), Inches(5.8), Inches(2.2), Inches(1.8), CORAL),
+        (Inches(-0.8), Inches(-0.6), Inches(2.6), Inches(2.2), colors["blue"]),
+        (Inches(11.0), Inches(5.8), Inches(2.2), Inches(1.8), colors["coral"]),
     ]:
         shape = slide.shapes.add_shape(
             MSO_AUTO_SHAPE_TYPE.OVAL, left, top, width, height
@@ -363,7 +558,7 @@ def add_image_background(prs, slide, image_path: Path):
     slide.shapes._spTree.insert(2, pic._element)
 
 
-def add_soft_overlay(prs, slide, transparency: float = 0.22):
+def add_soft_overlay(prs, slide, transparency: float, colors: Dict[str, RGBColor]):
     overlay = slide.shapes.add_shape(
         MSO_AUTO_SHAPE_TYPE.RECTANGLE,
         0,
@@ -372,19 +567,24 @@ def add_soft_overlay(prs, slide, transparency: float = 0.22):
         prs.slide_height,
     )
     overlay.fill.solid()
-    overlay.fill.fore_color.rgb = WHITE
+    overlay.fill.fore_color.rgb = colors["white"]
     set_shape_fill_transparency(overlay, transparency)
     overlay.line.fill.background()
 
 
-def apply_slide_background(prs, slide, bg_image: Path | None = None):
+def apply_slide_background(
+    prs,
+    slide,
+    colors: Dict[str, RGBColor],
+    bg_image: Path | None = None,
+):
     if bg_image is not None:
         add_image_background(prs, slide, bg_image)
     else:
-        add_default_background(slide)
+        add_default_background(slide, colors)
 
 
-def add_title_card(slide):
+def add_title_card(slide, colors: Dict[str, RGBColor]):
     card = slide.shapes.add_shape(
         MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
         Inches(0.7),
@@ -393,8 +593,8 @@ def add_title_card(slide):
         Inches(4.9),
     )
     card.fill.solid()
-    card.fill.fore_color.rgb = WHITE
-    card.line.color.rgb = BLUE
+    card.fill.fore_color.rgb = colors["white"]
+    card.line.color.rgb = colors["blue"]
     card.line.transparency = 0.85
     return card
 
@@ -404,25 +604,31 @@ def add_title_slide(
     set_label: str,
     section_title: str,
     source_name: str,
+    labels: Dict[str, str],
+    style: Dict[str, Any],
     bg_image: Path | None = None,
-    title_slide_overlay_transparency: float = 0.22,
-    show_title_card: bool = True,
-    title_card_transparency: float = 0.18,
 ):
+    colors = style["colors"]
+
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    apply_slide_background(prs, slide, bg_image)
+    apply_slide_background(prs, slide, colors, bg_image)
 
     if bg_image is not None:
-        add_soft_overlay(prs, slide, transparency=title_slide_overlay_transparency)
+        add_soft_overlay(
+            prs,
+            slide,
+            transparency=style["overlay_transparency"],
+            colors=colors,
+        )
 
     text_left = Inches(0.9)
     text_top = Inches(1.45)
     text_width = Inches(11.0)
     text_height = Inches(3.9)
 
-    if show_title_card:
-        card = add_title_card(slide)
-        set_shape_fill_transparency(card, title_card_transparency)
+    if style["show_card"]:
+        card = add_title_card(slide, colors)
+        set_shape_fill_transparency(card, style["card_transparency"])
         text_left = Inches(1.1)
         text_top = Inches(1.55)
         text_width = Inches(10.6)
@@ -436,9 +642,9 @@ def add_title_slide(
         Inches(0.45),
     )
     pill.fill.solid()
-    pill.fill.fore_color.rgb = WHITE
+    pill.fill.fore_color.rgb = colors["white"]
     set_shape_fill_transparency(pill, 0.15)
-    pill.line.color.rgb = BLUE
+    pill.line.color.rgb = colors["blue"]
 
     tf = pill.text_frame
     tf.clear()
@@ -446,10 +652,7 @@ def add_title_slide(
     p.alignment = PP_ALIGN.CENTER
     run = p.add_run()
     run.text = set_label.upper()
-    run.font.name = "Aptos"
-    run.font.bold = True
-    run.font.size = Pt(16)
-    run.font.color.rgb = BLUE
+    apply_font(run, style["pill_font"], colors["blue"])
 
     box = slide.shapes.add_textbox(text_left, text_top, text_width, text_height)
     tf = box.text_frame
@@ -459,28 +662,20 @@ def add_title_slide(
     p = tf.paragraphs[0]
     p.alignment = PP_ALIGN.LEFT
     r = p.add_run()
-    r.text = "Vocabulary Games"
-    r.font.name = "Aptos Display"
-    r.font.bold = True
-    r.font.size = Pt(28)
-    r.font.color.rgb = TEXT
+    r.text = labels["game_title"]
+    apply_font(r, style["main_font"], colors["text"])
 
     p2 = tf.add_paragraph()
     p2.alignment = PP_ALIGN.LEFT
     r2 = p2.add_run()
     r2.text = section_title
-    r2.font.name = "Aptos Display"
-    r2.font.bold = True
-    r2.font.size = Pt(24)
-    r2.font.color.rgb = BLUE
+    apply_font(r2, style["section_font"], colors["blue"])
 
     p3 = tf.add_paragraph()
     p3.alignment = PP_ALIGN.LEFT
     r3 = p3.add_run()
-    r3.text = f"Source: {source_name}"
-    r3.font.name = "Aptos"
-    r3.font.size = Pt(16)
-    r3.font.color.rgb = SUBTEXT
+    r3.text = f"{labels['source_prefix']} {source_name}"
+    apply_font(r3, style["body_font"], colors["subtext"])
 
 
 def fit_font_size(text: str) -> int:
@@ -496,27 +691,38 @@ def fit_font_size(text: str) -> int:
     return 20
 
 
+def resolve_vocab_primary_font(base_font: Dict[str, Any], text: str) -> Dict[str, Any]:
+    resolved = dict(base_font)
+    resolved["size"] = fit_font_size(text)
+    return resolved
+
+
 def add_vocab_slide(
     prs,
     primary_text: str,
-    secondary_text: str | None = None,
+    secondary_text: str | None,
+    style: Dict[str, Any],
     bg_image: Path | None = None,
-    show_vocab_card: bool = True,
-    vocab_slide_overlay_transparency: float = 0.22,
-    vocab_card_transparency: float = 0.18,
 ):
+    colors = style["colors"]
+
     slide = prs.slides.add_slide(prs.slide_layouts[6])
-    apply_slide_background(prs, slide, bg_image)
+    apply_slide_background(prs, slide, colors, bg_image)
 
     if bg_image is not None:
-        add_soft_overlay(prs, slide, transparency=vocab_slide_overlay_transparency)
+        add_soft_overlay(
+            prs,
+            slide,
+            transparency=style["overlay_transparency"],
+            colors=colors,
+        )
 
     text_left = Inches(1.1)
     text_top = Inches(1.55)
     text_width = Inches(11.1)
     text_height = Inches(4.3)
 
-    if show_vocab_card:
+    if style["show_card"]:
         card = slide.shapes.add_shape(
             MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
             Inches(0.7),
@@ -525,11 +731,10 @@ def add_vocab_slide(
             Inches(5.4),
         )
         card.fill.solid()
-        card.fill.fore_color.rgb = WHITE
-        set_shape_fill_transparency(card, vocab_card_transparency)
-        card.line.color.rgb = BLUE
+        card.fill.fore_color.rgb = colors["white"]
+        set_shape_fill_transparency(card, style["card_transparency"])
+        card.line.color.rgb = colors["blue"]
         card.line.transparency = 0.85
-
     else:
         text_left = Inches(0.9)
         text_top = Inches(1.2)
@@ -546,10 +751,11 @@ def add_vocab_slide(
     p1.alignment = PP_ALIGN.CENTER
     r1 = p1.add_run()
     r1.text = primary_text
-    r1.font.name = "Aptos Display"
-    r1.font.bold = True
-    r1.font.size = Pt(fit_font_size(primary_text))
-    r1.font.color.rgb = TEXT
+    apply_font(
+        r1,
+        resolve_vocab_primary_font(style["primary_font"], primary_text),
+        colors["text"],
+    )
 
     if secondary_text:
         p2 = tf.add_paragraph()
@@ -557,14 +763,13 @@ def add_vocab_slide(
         p2.space_before = Pt(12)
         r2 = p2.add_run()
         r2.text = secondary_text
-        r2.font.name = "Aptos"
-        r2.font.size = Pt(20)
-        r2.font.color.rgb = SUBTEXT
+        apply_font(r2, style["secondary_font"], colors["subtext"])
 
 
 def build_pptx(
     csv_path: Path,
     output_path: Path,
+    style_config: Dict[str, Any],
     set_count: int = 6,
     set_size: int = 10,
     seed: int = 42,
@@ -576,12 +781,12 @@ def build_pptx(
     background_image_number: int | None = None,
     background_cycle_start: int | None = None,
     background_cycle_end: int | None = None,
-    title_slide_overlay_transparency: float = 0.22,
-    vocab_slide_overlay_transparency: float = 0.22,
-    show_title_card: bool = True,
-    title_card_transparency: float = 0.18,
-    show_vocab_card: bool = True,
-    vocab_card_transparency: float = 0.18,
+    title_slide_overlay_transparency: float | None = None,
+    vocab_slide_overlay_transparency: float | None = None,
+    show_title_card: bool | None = None,
+    title_card_transparency: float | None = None,
+    show_vocab_card: bool | None = None,
+    vocab_card_transparency: float | None = None,
 ):
     vocab = read_vocab_csv(csv_path, min_rows=set_size)
     sets = random_sets(vocab, set_count=set_count, set_size=set_size, seed=seed)
@@ -597,6 +802,30 @@ def build_pptx(
             background_cycle_start=background_cycle_start,
             background_cycle_end=background_cycle_end,
         )
+
+    labels = style_config["labels"]
+    title_style = resolve_title_slide_style(style_config)
+    vocab_style = resolve_vocab_slide_style(style_config)
+
+    if title_slide_overlay_transparency is not None:
+        title_style["overlay_transparency"] = title_slide_overlay_transparency
+    if vocab_slide_overlay_transparency is not None:
+        vocab_style["overlay_transparency"] = vocab_slide_overlay_transparency
+    if show_title_card is not None:
+        title_style["show_card"] = show_title_card
+    if title_card_transparency is not None:
+        title_style["card_transparency"] = title_card_transparency
+    if show_vocab_card is not None:
+        vocab_style["show_card"] = show_vocab_card
+    if vocab_card_transparency is not None:
+        vocab_style["card_transparency"] = vocab_card_transparency
+
+    validate_visual_options(
+        title_slide_overlay_transparency=title_style["overlay_transparency"],
+        vocab_slide_overlay_transparency=vocab_style["overlay_transparency"],
+        title_card_transparency=title_style["card_transparency"],
+        vocab_card_transparency=vocab_style["card_transparency"],
+    )
 
     prs = Presentation()
     prs.slide_width = Inches(13.333)
@@ -614,13 +843,12 @@ def build_pptx(
         )
         add_title_slide(
             prs,
-            f"Set {set_number}",
-            f"{source_name} Vocabulary",
+            f"{labels['set_prefix']} {set_number}",
+            f"{source_name} {labels['vocabulary_suffix']}",
             csv_path.name,
+            labels=labels,
+            style=title_style,
             bg_image=title_bg,
-            title_slide_overlay_transparency=title_slide_overlay_transparency,
-            show_title_card=show_title_card,
-            title_card_transparency=title_card_transparency,
         )
         generated_slide_index += 1
 
@@ -641,10 +869,8 @@ def build_pptx(
                 prs,
                 primary_text,
                 secondary_text,
+                style=vocab_style,
                 bg_image=vocab_bg,
-                vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
-                show_vocab_card=show_vocab_card,
-                vocab_card_transparency=vocab_card_transparency,
             )
             rows.append((set_number, term, definition))
             generated_slide_index += 1
@@ -665,6 +891,7 @@ def build_pptx(
 def generate_from_inputs(
     csv_file: str | Path,
     output: str | Path | None = None,
+    style_config_file: str | Path | None = None,
     set_count: int = 6,
     set_size: int = 10,
     seed: int = 42,
@@ -676,12 +903,12 @@ def generate_from_inputs(
     background_image_number: int | None = None,
     background_cycle_start: int | None = None,
     background_cycle_end: int | None = None,
-    title_slide_overlay_transparency: float = 0.22,
-    vocab_slide_overlay_transparency: float = 0.22,
-    show_title_card: bool = True,
-    title_card_transparency: float = 0.18,
-    show_vocab_card: bool = True,
-    vocab_card_transparency: float = 0.18,
+    title_slide_overlay_transparency: float | None = None,
+    vocab_slide_overlay_transparency: float | None = None,
+    show_title_card: bool | None = None,
+    title_card_transparency: float | None = None,
+    show_vocab_card: bool | None = None,
+    vocab_card_transparency: float | None = None,
 ):
     validate_generation_options(set_count, set_size, primary_side)
     validate_background_options(
@@ -691,19 +918,15 @@ def generate_from_inputs(
         background_cycle_start=background_cycle_start,
         background_cycle_end=background_cycle_end,
     )
-    validate_visual_options(
-        title_slide_overlay_transparency=title_slide_overlay_transparency,
-        vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
-        title_card_transparency=title_card_transparency,
-        vocab_card_transparency=vocab_card_transparency,
-    )
 
     csv_path = resolve_csv_path(csv_file)
     output_path = resolve_output_path(csv_path, output)
+    style_config = load_style_config(style_config_file)
 
     return build_pptx(
         csv_path,
         output_path,
+        style_config=style_config,
         set_count=set_count,
         set_size=set_size,
         seed=seed,

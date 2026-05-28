@@ -6,19 +6,23 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from mainkata.services.generator import (generate_from_inputs,
-                                         resolve_output_path)
+from mainkata.services.generator import (
+    generate_from_inputs,
+    resolve_output_path,
+)
 
 
 class VocabPptxGui(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("Mainkata: Term-Definition PPTX Generator")
-        self.geometry("780x940")
-        self.minsize(740, 760)
+        self.geometry("860x1080")
+        self.minsize(820, 900)
 
         self.csv_path_var = tk.StringVar()
         self.output_var = tk.StringVar()
+        self.style_config_var = tk.StringVar()
+
         self.sets_var = tk.StringVar(value="6")
         self.set_size_var = tk.StringVar(value="10")
         self.seed_var = tk.StringVar(value="42")
@@ -32,11 +36,20 @@ class VocabPptxGui(tk.Tk):
         self.background_cycle_start_var = tk.StringVar()
         self.background_cycle_end_var = tk.StringVar()
 
+        self.override_title_slide_overlay_var = tk.BooleanVar(value=False)
         self.title_slide_overlay_transparency_var = tk.StringVar(value="0.22")
+
+        self.override_vocab_slide_overlay_var = tk.BooleanVar(value=False)
         self.vocab_slide_overlay_transparency_var = tk.StringVar(value="0.22")
+
+        self.override_title_card_var = tk.BooleanVar(value=False)
         self.show_title_card_var = tk.BooleanVar(value=True)
+        self.override_title_card_transparency_var = tk.BooleanVar(value=False)
         self.title_card_transparency_var = tk.StringVar(value="0.18")
+
+        self.override_vocab_card_var = tk.BooleanVar(value=False)
         self.show_vocab_card_var = tk.BooleanVar(value=True)
+        self.override_vocab_card_transparency_var = tk.BooleanVar(value=False)
         self.vocab_card_transparency_var = tk.StringVar(value="0.18")
 
         self.status_var = tk.StringVar(value="Choose a CSV file to begin.")
@@ -68,34 +81,47 @@ class VocabPptxGui(tk.Tk):
             row=1, column=2, sticky="ew", pady=8
         )
 
-        ttk.Label(root, text="Sets").grid(
+        ttk.Label(root, text="Style config (TOML)").grid(
             row=2, column=0, sticky="w", padx=(0, 10), pady=8
         )
+        ttk.Entry(root, textvariable=self.style_config_var).grid(
+            row=2, column=1, sticky="ew", pady=8
+        )
+        ttk.Button(root, text="Browse…", command=self.choose_style_config).grid(
+            row=2, column=2, sticky="ew", pady=8
+        )
+
+        ttk.Label(root, text="Sets").grid(
+            row=3, column=0, sticky="w", padx=(0, 10), pady=8
+        )
         ttk.Spinbox(root, from_=1, to=999, textvariable=self.sets_var, width=10).grid(
-            row=2, column=1, sticky="w", pady=8
+            row=3, column=1, sticky="w", pady=8
         )
 
         ttk.Label(root, text="Set size").grid(
-            row=3, column=0, sticky="w", padx=(0, 10), pady=8
+            row=4, column=0, sticky="w", padx=(0, 10), pady=8
         )
         ttk.Spinbox(
             root, from_=1, to=999, textvariable=self.set_size_var, width=10
-        ).grid(row=3, column=1, sticky="w", pady=8)
+        ).grid(row=4, column=1, sticky="w", pady=8)
 
         ttk.Label(root, text="Seed").grid(
-            row=4, column=0, sticky="w", padx=(0, 10), pady=8
+            row=5, column=0, sticky="w", padx=(0, 10), pady=8
         )
         ttk.Entry(root, textvariable=self.seed_var, width=12).grid(
-            row=4, column=1, sticky="w", pady=8
+            row=5, column=1, sticky="w", pady=8
         )
 
         ttk.Label(root, text="Large text shows").grid(
-            row=5, column=0, sticky="w", padx=(0, 10), pady=8
+            row=6, column=0, sticky="w", padx=(0, 10), pady=8
         )
         primary_frame = ttk.Frame(root)
-        primary_frame.grid(row=5, column=1, columnspan=2, sticky="w", pady=8)
+        primary_frame.grid(row=6, column=1, columnspan=2, sticky="w", pady=8)
         ttk.Radiobutton(
-            primary_frame, text="Term", value="term", variable=self.primary_side_var
+            primary_frame,
+            text="Term",
+            value="term",
+            variable=self.primary_side_var,
         ).pack(side="left", padx=(0, 12))
         ttk.Radiobutton(
             primary_frame,
@@ -108,28 +134,28 @@ class VocabPptxGui(tk.Tk):
             root,
             text="Show alternate side in smaller text",
             variable=self.show_alternate_var,
-        ).grid(row=6, column=0, columnspan=3, sticky="w", pady=6)
+        ).grid(row=7, column=0, columnspan=3, sticky="w", pady=6)
 
         ttk.Checkbutton(
             root,
             text="Generate selected_terms CSV",
             variable=self.export_selected_terms_var,
-        ).grid(row=7, column=0, columnspan=3, sticky="w", pady=6)
+        ).grid(row=8, column=0, columnspan=3, sticky="w", pady=6)
 
-        ttk.Separator(root).grid(row=8, column=0, columnspan=3, sticky="ew", pady=12)
+        ttk.Separator(root).grid(row=9, column=0, columnspan=3, sticky="ew", pady=12)
 
         ttk.Label(root, text="Background image folder").grid(
-            row=9, column=0, sticky="w", padx=(0, 10), pady=8
+            row=10, column=0, sticky="w", padx=(0, 10), pady=8
         )
         ttk.Entry(root, textvariable=self.background_dir_var).grid(
-            row=9, column=1, sticky="ew", pady=8
+            row=10, column=1, sticky="ew", pady=8
         )
         ttk.Button(root, text="Browse…", command=self.choose_background_dir).grid(
-            row=9, column=2, sticky="ew", pady=8
+            row=10, column=2, sticky="ew", pady=8
         )
 
         ttk.Label(root, text="Background mode").grid(
-            row=10, column=0, sticky="w", padx=(0, 10), pady=8
+            row=11, column=0, sticky="w", padx=(0, 10), pady=8
         )
         self.background_mode_combo = ttk.Combobox(
             root,
@@ -138,13 +164,13 @@ class VocabPptxGui(tk.Tk):
             state="readonly",
             width=12,
         )
-        self.background_mode_combo.grid(row=10, column=1, sticky="w", pady=8)
+        self.background_mode_combo.grid(row=11, column=1, sticky="w", pady=8)
         self.background_mode_combo.bind(
             "<<ComboboxSelected>>", self._on_background_mode_changed
         )
 
         ttk.Label(root, text="Fixed image number").grid(
-            row=11, column=0, sticky="w", padx=(0, 10), pady=8
+            row=12, column=0, sticky="w", padx=(0, 10), pady=8
         )
         self.fixed_image_spinbox = ttk.Spinbox(
             root,
@@ -153,13 +179,13 @@ class VocabPptxGui(tk.Tk):
             textvariable=self.background_image_number_var,
             width=10,
         )
-        self.fixed_image_spinbox.grid(row=11, column=1, sticky="w", pady=8)
+        self.fixed_image_spinbox.grid(row=12, column=1, sticky="w", pady=8)
 
         ttk.Label(root, text="Cycle image range").grid(
-            row=12, column=0, sticky="w", padx=(0, 10), pady=8
+            row=13, column=0, sticky="w", padx=(0, 10), pady=8
         )
         cycle_frame = ttk.Frame(root)
-        cycle_frame.grid(row=12, column=1, columnspan=2, sticky="w", pady=8)
+        cycle_frame.grid(row=13, column=1, columnspan=2, sticky="w", pady=8)
 
         self.cycle_start_spinbox = ttk.Spinbox(
             cycle_frame,
@@ -181,85 +207,118 @@ class VocabPptxGui(tk.Tk):
         )
         self.cycle_end_spinbox.pack(side="left")
 
-        ttk.Label(root, text="Title-slide overlay transparency").grid(
-            row=13, column=0, sticky="w", padx=(0, 10), pady=8
+        ttk.Separator(root).grid(row=14, column=0, columnspan=3, sticky="ew", pady=12)
+
+        ttk.Label(root, text="Style overrides").grid(
+            row=15, column=0, sticky="w", padx=(0, 10), pady=(2, 8)
         )
+
+        ttk.Checkbutton(
+            root,
+            text="Override title-slide overlay transparency",
+            variable=self.override_title_slide_overlay_var,
+            command=self._on_style_override_toggle,
+        ).grid(row=16, column=0, columnspan=2, sticky="w", pady=4)
         self.title_slide_overlay_transparency_entry = ttk.Entry(
             root,
             textvariable=self.title_slide_overlay_transparency_var,
             width=10,
         )
         self.title_slide_overlay_transparency_entry.grid(
-            row=13, column=1, sticky="w", pady=8
+            row=16, column=2, sticky="w", pady=4
         )
 
-        ttk.Label(root, text="Vocab-slide overlay transparency").grid(
-            row=14, column=0, sticky="w", padx=(0, 10), pady=8
-        )
+        ttk.Checkbutton(
+            root,
+            text="Override vocab-slide overlay transparency",
+            variable=self.override_vocab_slide_overlay_var,
+            command=self._on_style_override_toggle,
+        ).grid(row=17, column=0, columnspan=2, sticky="w", pady=4)
         self.vocab_slide_overlay_transparency_entry = ttk.Entry(
             root,
             textvariable=self.vocab_slide_overlay_transparency_var,
             width=10,
         )
         self.vocab_slide_overlay_transparency_entry.grid(
-            row=14, column=1, sticky="w", pady=8
+            row=17, column=2, sticky="w", pady=4
         )
 
         ttk.Checkbutton(
             root,
+            text="Override title card visibility",
+            variable=self.override_title_card_var,
+            command=self._on_style_override_toggle,
+        ).grid(row=18, column=0, columnspan=2, sticky="w", pady=4)
+        self.show_title_card_checkbutton = ttk.Checkbutton(
+            root,
             text="Show white card on title slides",
             variable=self.show_title_card_var,
-            command=self._on_title_card_toggle,
-        ).grid(row=15, column=0, columnspan=3, sticky="w", pady=6)
-
-        ttk.Label(root, text="Title card transparency").grid(
-            row=16, column=0, sticky="w", padx=(0, 10), pady=8
         )
+        self.show_title_card_checkbutton.grid(row=18, column=2, sticky="w", pady=4)
+
+        ttk.Checkbutton(
+            root,
+            text="Override title card transparency",
+            variable=self.override_title_card_transparency_var,
+            command=self._on_style_override_toggle,
+        ).grid(row=19, column=0, columnspan=2, sticky="w", pady=4)
         self.title_card_transparency_entry = ttk.Entry(
             root,
             textvariable=self.title_card_transparency_var,
             width=10,
         )
-        self.title_card_transparency_entry.grid(row=16, column=1, sticky="w", pady=8)
+        self.title_card_transparency_entry.grid(row=19, column=2, sticky="w", pady=4)
 
         ttk.Checkbutton(
             root,
+            text="Override vocab card visibility",
+            variable=self.override_vocab_card_var,
+            command=self._on_style_override_toggle,
+        ).grid(row=20, column=0, columnspan=2, sticky="w", pady=4)
+        self.show_vocab_card_checkbutton = ttk.Checkbutton(
+            root,
             text="Show white card on vocab slides",
             variable=self.show_vocab_card_var,
-            command=self._on_vocab_card_toggle,
-        ).grid(row=17, column=0, columnspan=3, sticky="w", pady=6)
-
-        ttk.Label(root, text="Vocab card transparency").grid(
-            row=18, column=0, sticky="w", padx=(0, 10), pady=8
         )
+        self.show_vocab_card_checkbutton.grid(row=20, column=2, sticky="w", pady=4)
+
+        ttk.Checkbutton(
+            root,
+            text="Override vocab card transparency",
+            variable=self.override_vocab_card_transparency_var,
+            command=self._on_style_override_toggle,
+        ).grid(row=21, column=0, columnspan=2, sticky="w", pady=4)
         self.vocab_card_transparency_entry = ttk.Entry(
             root,
             textvariable=self.vocab_card_transparency_var,
             width=10,
         )
-        self.vocab_card_transparency_entry.grid(row=18, column=1, sticky="w", pady=8)
+        self.vocab_card_transparency_entry.grid(row=21, column=2, sticky="w", pady=4)
 
         help_text = (
             "CSV must contain Term and Definition headers.\n"
             "Header matching is case-insensitive, and one CSV file is processed at a time.\n"
             "The file must also contain enough unique rows for the selected set size.\n\n"
+            "Optional style config: choose a TOML file to define visual defaults.\n"
+            "Style override checkboxes let you override only selected values in the GUI.\n"
+            "Unchecked style override fields pass None to the generator so config/defaults apply.\n\n"
             "Optional background folder: if one image is present it is used for all slides;\n"
             "otherwise choose fixed or cycle mode. In cycle mode, leave the range blank to\n"
             "cycle through all images, or provide both start and end image numbers.\n\n"
             "Transparency values must be between 0.0 (opaque) and 1.0 (fully transparent)."
         )
         ttk.Label(root, text=help_text, justify="left").grid(
-            row=19, column=0, columnspan=3, sticky="w", pady=(12, 8)
+            row=22, column=0, columnspan=3, sticky="w", pady=(12, 8)
         )
 
         ttk.Button(root, text="Generate PPTX", command=self.generate).grid(
-            row=20, column=0, columnspan=3, sticky="ew", pady=(8, 12)
+            row=23, column=0, columnspan=3, sticky="ew", pady=(8, 12)
         )
 
-        ttk.Label(root, text="Status").grid(row=21, column=0, sticky="nw", pady=(4, 6))
+        ttk.Label(root, text="Status").grid(row=24, column=0, sticky="nw", pady=(4, 6))
         status_frame = ttk.Frame(root)
-        status_frame.grid(row=21, column=1, columnspan=2, sticky="nsew", pady=(4, 6))
-        root.rowconfigure(21, weight=1)
+        status_frame.grid(row=24, column=1, columnspan=2, sticky="nsew", pady=(4, 6))
+        root.rowconfigure(24, weight=1)
         status_frame.columnconfigure(0, weight=1)
         status_frame.rowconfigure(1, weight=1)
 
@@ -270,8 +329,7 @@ class VocabPptxGui(tk.Tk):
         self.log.grid(row=1, column=0, sticky="nsew")
 
         self._on_background_mode_changed()
-        self._on_title_card_toggle()
-        self._on_vocab_card_toggle()
+        self._on_style_override_toggle()
 
     def _require_int(self, value: str, field_name: str) -> int:
         text = value.strip()
@@ -305,6 +363,7 @@ class VocabPptxGui(tk.Tk):
     ) -> tuple[
         str,
         str | None,
+        str | None,
         int,
         int,
         int,
@@ -316,18 +375,20 @@ class VocabPptxGui(tk.Tk):
         int | None,
         int | None,
         int | None,
-        float,
-        float,
-        bool,
-        float,
-        bool,
-        float,
+        float | None,
+        float | None,
+        bool | None,
+        float | None,
+        bool | None,
+        float | None,
     ]:
         csv_file = self.csv_path_var.get().strip()
         if not csv_file:
             raise ValueError("Please choose a CSV file.")
 
         output = self.output_var.get().strip() or None
+        style_config_file = self.style_config_var.get().strip() or None
+
         set_count = self._require_int(self.sets_var.get(), "Sets")
         set_size = self._require_int(self.set_size_var.get(), "Set size")
         seed = self._require_int(self.seed_var.get(), "Seed")
@@ -350,24 +411,57 @@ class VocabPptxGui(tk.Tk):
             "Cycle end image number",
         )
 
-        title_slide_overlay_transparency = self._require_float(
-            self.title_slide_overlay_transparency_var.get(),
-            "Title-slide overlay transparency",
+        title_slide_overlay_transparency = None
+        if self.override_title_slide_overlay_var.get():
+            title_slide_overlay_transparency = self._require_float(
+                self.title_slide_overlay_transparency_var.get(),
+                "Title-slide overlay transparency",
+            )
+            if not 0.0 <= title_slide_overlay_transparency <= 1.0:
+                raise ValueError(
+                    "Title-slide overlay transparency must be between 0.0 and 1.0."
+                )
+
+        vocab_slide_overlay_transparency = None
+        if self.override_vocab_slide_overlay_var.get():
+            vocab_slide_overlay_transparency = self._require_float(
+                self.vocab_slide_overlay_transparency_var.get(),
+                "Vocab-slide overlay transparency",
+            )
+            if not 0.0 <= vocab_slide_overlay_transparency <= 1.0:
+                raise ValueError(
+                    "Vocab-slide overlay transparency must be between 0.0 and 1.0."
+                )
+
+        show_title_card = (
+            self.show_title_card_var.get()
+            if self.override_title_card_var.get()
+            else None
         )
-        vocab_slide_overlay_transparency = self._require_float(
-            self.vocab_slide_overlay_transparency_var.get(),
-            "Vocab-slide overlay transparency",
+
+        title_card_transparency = None
+        if self.override_title_card_transparency_var.get():
+            title_card_transparency = self._require_float(
+                self.title_card_transparency_var.get(),
+                "Title card transparency",
+            )
+            if not 0.0 <= title_card_transparency <= 1.0:
+                raise ValueError("Title card transparency must be between 0.0 and 1.0.")
+
+        show_vocab_card = (
+            self.show_vocab_card_var.get()
+            if self.override_vocab_card_var.get()
+            else None
         )
-        show_title_card = self.show_title_card_var.get()
-        title_card_transparency = self._require_float(
-            self.title_card_transparency_var.get(),
-            "Title card transparency",
-        )
-        show_vocab_card = self.show_vocab_card_var.get()
-        vocab_card_transparency = self._require_float(
-            self.vocab_card_transparency_var.get(),
-            "Vocab card transparency",
-        )
+
+        vocab_card_transparency = None
+        if self.override_vocab_card_transparency_var.get():
+            vocab_card_transparency = self._require_float(
+                self.vocab_card_transparency_var.get(),
+                "Vocab card transparency",
+            )
+            if not 0.0 <= vocab_card_transparency <= 1.0:
+                raise ValueError("Vocab card transparency must be between 0.0 and 1.0.")
 
         if set_count < 1:
             raise ValueError("Sets must be at least 1.")
@@ -377,18 +471,17 @@ class VocabPptxGui(tk.Tk):
             raise ValueError("Large text shows must be either Term or Definition.")
         if background_mode not in {"fixed", "cycle"}:
             raise ValueError("Background mode must be either fixed or cycle.")
-        if not 0.0 <= title_slide_overlay_transparency <= 1.0:
-            raise ValueError(
-                "Title-slide overlay transparency must be between 0.0 and 1.0."
-            )
-        if not 0.0 <= vocab_slide_overlay_transparency <= 1.0:
-            raise ValueError(
-                "Vocab-slide overlay transparency must be between 0.0 and 1.0."
-            )
-        if not 0.0 <= title_card_transparency <= 1.0:
-            raise ValueError("Title card transparency must be between 0.0 and 1.0.")
-        if not 0.0 <= vocab_card_transparency <= 1.0:
-            raise ValueError("Vocab card transparency must be between 0.0 and 1.0.")
+
+        if style_config_file:
+            style_config_path = Path(style_config_file).expanduser().resolve()
+            if not style_config_path.exists():
+                raise FileNotFoundError(
+                    f"Style config file not found:\n{style_config_path}"
+                )
+            if not style_config_path.is_file():
+                raise ValueError(
+                    f"Style config path is not a file:\n{style_config_path}"
+                )
 
         if background_dir is None:
             background_image_number = None
@@ -398,6 +491,7 @@ class VocabPptxGui(tk.Tk):
         return (
             csv_file,
             output,
+            style_config_file,
             set_count,
             set_size,
             seed,
@@ -440,21 +534,38 @@ class VocabPptxGui(tk.Tk):
 
         fixed_state = "normal" if has_dir and mode == "fixed" else "disabled"
         cycle_state = "normal" if has_dir and mode == "cycle" else "disabled"
-        overlay_state = "normal" if has_dir else "disabled"
 
         self.fixed_image_spinbox.configure(state=fixed_state)
         self.cycle_start_spinbox.configure(state=cycle_state)
         self.cycle_end_spinbox.configure(state=cycle_state)
-        self.title_slide_overlay_transparency_entry.configure(state=overlay_state)
-        self.vocab_slide_overlay_transparency_entry.configure(state=overlay_state)
 
-    def _on_title_card_toggle(self) -> None:
-        state = "normal" if self.show_title_card_var.get() else "disabled"
-        self.title_card_transparency_entry.configure(state=state)
-
-    def _on_vocab_card_toggle(self) -> None:
-        state = "normal" if self.show_vocab_card_var.get() else "disabled"
-        self.vocab_card_transparency_entry.configure(state=state)
+    def _on_style_override_toggle(self) -> None:
+        self.title_slide_overlay_transparency_entry.configure(
+            state="normal"
+            if self.override_title_slide_overlay_var.get()
+            else "disabled"
+        )
+        self.vocab_slide_overlay_transparency_entry.configure(
+            state="normal"
+            if self.override_vocab_slide_overlay_var.get()
+            else "disabled"
+        )
+        self.show_title_card_checkbutton.configure(
+            state="normal" if self.override_title_card_var.get() else "disabled"
+        )
+        self.title_card_transparency_entry.configure(
+            state="normal"
+            if self.override_title_card_transparency_var.get()
+            else "disabled"
+        )
+        self.show_vocab_card_checkbutton.configure(
+            state="normal" if self.override_vocab_card_var.get() else "disabled"
+        )
+        self.vocab_card_transparency_entry.configure(
+            state="normal"
+            if self.override_vocab_card_transparency_var.get()
+            else "disabled"
+        )
 
     def choose_csv(self) -> None:
         filename = filedialog.askopenfilename(
@@ -485,6 +596,19 @@ class VocabPptxGui(tk.Tk):
         self.status_var.set("Output file selected.")
         self._append_log(f"Output: {filename}")
 
+    def choose_style_config(self) -> None:
+        initial = self.style_config_var.get().strip()
+        filename = filedialog.askopenfilename(
+            title="Choose style config file",
+            initialdir=str(Path(initial).parent) if initial else "",
+            filetypes=[("TOML files", "*.toml"), ("All files", "*.*")],
+        )
+        if not filename:
+            return
+        self.style_config_var.set(filename)
+        self.status_var.set("Style config file selected.")
+        self._append_log(f"Style config: {filename}")
+
     def choose_background_dir(self) -> None:
         initial = self.background_dir_var.get().strip()
         dirname = filedialog.askdirectory(
@@ -505,6 +629,7 @@ class VocabPptxGui(tk.Tk):
             (
                 csv_file,
                 output,
+                style_config_file,
                 set_count,
                 set_size,
                 seed,
@@ -542,7 +667,9 @@ class VocabPptxGui(tk.Tk):
                 message += "\n".join(str(p) for p in files_to_overwrite)
                 message += "\n\nDo you want to overwrite them?"
                 ok = messagebox.askyesno(
-                    "Overwrite existing files?", message, parent=self
+                    "Overwrite existing files?",
+                    message,
+                    parent=self,
                 )
                 if not ok:
                     self.status_var.set("Generation cancelled.")
@@ -552,17 +679,22 @@ class VocabPptxGui(tk.Tk):
             self.status_var.set("Generating PPTX...")
             self._append_log(f"Generating: {output_path}")
 
+            if style_config_file:
+                self._append_log(f"Style config: {style_config_file}")
+
             if background_dir:
                 self._append_log(f"Background folder: {background_dir}")
                 self._append_log(f"Background mode: {background_mode}")
-                self._append_log(
-                    "Title-slide overlay transparency: "
-                    f"{title_slide_overlay_transparency}"
-                )
-                self._append_log(
-                    "Vocab-slide overlay transparency: "
-                    f"{vocab_slide_overlay_transparency}"
-                )
+                if title_slide_overlay_transparency is not None:
+                    self._append_log(
+                        "Title-slide overlay transparency override: "
+                        f"{title_slide_overlay_transparency}"
+                    )
+                if vocab_slide_overlay_transparency is not None:
+                    self._append_log(
+                        "Vocab-slide overlay transparency override: "
+                        f"{vocab_slide_overlay_transparency}"
+                    )
                 if background_mode == "fixed" and background_image_number is not None:
                     self._append_log(
                         f"Fixed background image number: {background_image_number}"
@@ -579,17 +711,24 @@ class VocabPptxGui(tk.Tk):
                     else:
                         self._append_log("Cycle background image range: all images")
 
-            self._append_log(f"Show title card: {show_title_card}")
-            if show_title_card:
-                self._append_log(f"Title card transparency: {title_card_transparency}")
+            if show_title_card is not None:
+                self._append_log(f"Show title card override: {show_title_card}")
+            if title_card_transparency is not None:
+                self._append_log(
+                    f"Title card transparency override: {title_card_transparency}"
+                )
 
-            self._append_log(f"Show vocab card: {show_vocab_card}")
-            if show_vocab_card:
-                self._append_log(f"Vocab card transparency: {vocab_card_transparency}")
+            if show_vocab_card is not None:
+                self._append_log(f"Show vocab card override: {show_vocab_card}")
+            if vocab_card_transparency is not None:
+                self._append_log(
+                    f"Vocab card transparency override: {vocab_card_transparency}"
+                )
 
             pptx_path, csv_out = generate_from_inputs(
                 csv_file=csv_file,
                 output=str(output_path),
+                style_config_file=style_config_file,
                 set_count=set_count,
                 set_size=set_size,
                 seed=seed,
@@ -647,8 +786,8 @@ class VocabPptxGui(tk.Tk):
             messagebox.showerror(
                 "Generation failed",
                 "Something went wrong while creating the PowerPoint.\n"
-                "Please check the CSV file, background folder, and output location, "
-                "then try again.",
+                "Please check the CSV file, style config file, background folder, "
+                "and output location, then try again.",
                 parent=self,
             )
 

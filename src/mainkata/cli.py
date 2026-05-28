@@ -4,69 +4,84 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from mainkata.services.generator import (generate_from_inputs,
-                                         resolve_output_path)
+from mainkata.services.generator import (
+    generate_from_inputs,
+    resolve_output_path,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate a PowerPoint deck from one Term-Definition CSV file."
+        description="Generate a PowerPoint deck from one Term-Definition CSV file.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+
     parser.add_argument(
-        "csv_file", help="Path to input CSV with headers: Term, Definition"
+        "csv_file",
+        help="Path to the input CSV file with headers: Term, Definition",
     )
     parser.add_argument(
         "-o",
         "--output",
-        help="Output PPTX filename; default is based on the CSV filename",
+        help="Output PPTX filename; defaults to a name based on the CSV filename",
     )
     parser.add_argument(
-        "--sets", type=int, default=6, help="Number of sets to generate (default: 6)"
+        "--style-config",
+        help="Optional TOML style configuration file",
     )
-    parser.add_argument(
+
+    generation_group = parser.add_argument_group("generation options")
+    generation_group.add_argument(
+        "--sets",
+        type=int,
+        default=6,
+        help="Number of sets to generate",
+    )
+    generation_group.add_argument(
         "--set-size",
         type=int,
         default=10,
-        help="Slides per set, excluding the title slide (default: 10)",
+        help="Slides per set, excluding the title slide",
     )
-    parser.add_argument(
-        "--seed", type=int, default=42, help="Random seed for repeatable permutations"
+    generation_group.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for repeatable permutations",
     )
-    parser.add_argument(
+    generation_group.add_argument(
         "--export-selected-terms",
         action="store_true",
         help="Also write a companion CSV listing the selected terms for each set",
     )
-    parser.add_argument(
+    generation_group.add_argument(
         "--primary-side",
         choices=["term", "definition"],
         default="term",
-        help="Which side is shown in large font on each slide (default: term)",
+        help="Which side is shown in large font on each slide",
     )
-    parser.add_argument(
+    generation_group.add_argument(
         "--hide-alternate",
         action="store_true",
-        help="Hide the alternate side from the slide instead of showing it in smaller text",
+        help="Hide the alternate side instead of showing it in smaller text",
     )
 
-    parser.add_argument(
+    background_group = parser.add_argument_group("background options")
+    background_group.add_argument(
         "--background-dir",
-        help=(
-            "Optional directory containing background image files "
-            "(.png, .jpg, .jpeg)"
-        ),
+        help="Optional directory containing background image files (.png, .jpg, .jpeg)",
     )
-    parser.add_argument(
+    background_group.add_argument(
         "--background-mode",
         choices=["fixed", "cycle"],
         default="cycle",
         help=(
             "How to use multiple background images: "
             "'fixed' uses one nominated image for all slides; "
-            "'cycle' rotates through images (default: cycle)"
+            "'cycle' rotates through images"
         ),
     )
-    parser.add_argument(
+    background_group.add_argument(
         "--background-image-number",
         type=int,
         help=(
@@ -74,7 +89,7 @@ def main() -> None:
             "for example, 1 means the first image in sorted order"
         ),
     )
-    parser.add_argument(
+    background_group.add_argument(
         "--background-cycle-start",
         type=int,
         help=(
@@ -82,7 +97,7 @@ def main() -> None:
             "must be used together with --background-cycle-end"
         ),
     )
-    parser.add_argument(
+    background_group.add_argument(
         "--background-cycle-end",
         type=int,
         help=(
@@ -91,58 +106,61 @@ def main() -> None:
         ),
     )
 
-    parser.add_argument(
+    slide_style_group = parser.add_argument_group("slide style options")
+    slide_style_group.add_argument(
         "--title-slide-overlay-transparency",
         type=float,
         default=0.22,
         help=(
             "Transparency for the title-slide soft overlay when using background images "
-            "(0.0 = opaque, 1.0 = fully transparent; default: 0.22)"
+            "(0.0 = opaque, 1.0 = fully transparent)"
         ),
     )
-    parser.add_argument(
+    slide_style_group.add_argument(
         "--vocab-slide-overlay-transparency",
         type=float,
         default=0.22,
         help=(
             "Transparency for the vocab-slide soft overlay when using background images "
-            "(0.0 = opaque, 1.0 = fully transparent; default: 0.22)"
+            "(0.0 = opaque, 1.0 = fully transparent)"
         ),
     )
-    parser.add_argument(
+    slide_style_group.add_argument(
         "--hide-title-card",
         action="store_true",
         help="Do not draw the white rounded card on title slides",
     )
-    parser.add_argument(
+    slide_style_group.add_argument(
         "--title-card-transparency",
         type=float,
         default=0.18,
         help=(
             "Transparency for the title-slide white card "
-            "(0.0 = opaque, 1.0 = fully transparent; default: 0.18)"
+            "(0.0 = opaque, 1.0 = fully transparent)"
         ),
     )
-    parser.add_argument(
+    slide_style_group.add_argument(
         "--hide-vocab-card",
         action="store_true",
         help="Do not draw the white rounded card on vocab slides",
     )
-    parser.add_argument(
+    slide_style_group.add_argument(
         "--vocab-card-transparency",
         type=float,
         default=0.18,
         help=(
             "Transparency for the vocab-slide white card "
-            "(0.0 = opaque, 1.0 = fully transparent; default: 0.18)"
+            "(0.0 = opaque, 1.0 = fully transparent)"
         ),
     )
 
-    parser.add_argument(
+    output_group = parser.add_argument_group("output options")
+    output_group.add_argument(
         "--force",
         action="store_true",
         help="Overwrite existing output file(s) without prompting",
     )
+
     args = parser.parse_args()
 
     csv_path = Path(args.csv_file).expanduser().resolve()
@@ -163,6 +181,7 @@ def main() -> None:
         pptx_path, csv_out = generate_from_inputs(
             csv_file=csv_path,
             output=out_path,
+            style_config_file=args.style_config,
             set_count=args.sets,
             set_size=args.set_size,
             seed=args.seed,
