@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import csv
 import os
-import random
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Tuple
+from typing import Any, Dict, List
 
 from PIL import Image
 from pptx import Presentation
@@ -15,6 +13,15 @@ from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Inches, Pt
+
+from mainkata.domain.selection import random_sets
+from mainkata.domain.types import BackgroundMode, PrimarySide, VocabPair
+from mainkata.domain.validation import (validate_background_options,
+                                        validate_generation_options,
+                                        validate_visual_options)
+from mainkata.io.paths import (resolve_background_dir, resolve_csv_path,
+                               resolve_output_path)
+from mainkata.io.vocab_csv import read_vocab_csv
 
 try:
     import tomllib  # Python 3.11+
@@ -28,9 +35,6 @@ SUBTEXT = RGBColor(71, 85, 105)
 CORAL = RGBColor(249, 112, 102)
 WHITE = RGBColor(255, 255, 255)
 
-VocabPair = Tuple[str, str]
-PrimarySide = Literal["term", "definition"]
-BackgroundMode = Literal["fixed", "cycle"]
 
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
 
@@ -216,130 +220,6 @@ def resolve_vocab_slide_style(style_config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def resolve_csv_path(csv_file: str | Path) -> Path:
-    csv_path = Path(csv_file).expanduser().resolve()
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV file not found: {csv_path}")
-    return csv_path
-
-
-def resolve_output_path(csv_path: Path, output: str | Path | None = None) -> Path:
-    if output:
-        output_path = Path(output).expanduser().resolve()
-    else:
-        output_path = csv_path.with_name(csv_path.stem + "_vocab_sets.pptx")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    return output_path
-
-
-def resolve_background_dir(background_dir: str | Path) -> Path:
-    bg_dir = Path(background_dir).expanduser().resolve()
-    if not bg_dir.exists():
-        raise FileNotFoundError(f"Background directory not found: {bg_dir}")
-    if not bg_dir.is_dir():
-        raise ValueError(f"Background path is not a directory: {bg_dir}")
-    return bg_dir
-
-
-def validate_generation_options(
-    set_count: int,
-    set_size: int,
-    primary_side: PrimarySide,
-) -> None:
-    if set_count < 1:
-        raise ValueError("--sets must be at least 1.")
-    if set_size < 1:
-        raise ValueError("--set-size must be at least 1.")
-    if primary_side not in {"term", "definition"}:
-        raise ValueError("--primary-side must be either 'term' or 'definition'.")
-
-
-def validate_background_options(
-    background_dir: str | Path | None,
-    background_mode: BackgroundMode,
-    background_image_number: int | None,
-    background_cycle_start: int | None,
-    background_cycle_end: int | None,
-) -> None:
-    if background_dir is None:
-        return
-
-    if background_mode not in {"fixed", "cycle"}:
-        raise ValueError("--background-mode must be 'fixed' or 'cycle'.")
-
-    if background_mode == "fixed":
-        if background_image_number is None or background_image_number < 1:
-            raise ValueError(
-                "--background-image-number must be >= 1 when "
-                "--background-mode=fixed."
-            )
-        if background_cycle_start is not None or background_cycle_end is not None:
-            raise ValueError(
-                "--background-cycle-start and --background-cycle-end cannot be "
-                "used with --background-mode=fixed."
-            )
-
-    if background_mode == "cycle":
-        if background_image_number is not None:
-            raise ValueError(
-                "--background-image-number cannot be used with "
-                "--background-mode=cycle."
-            )
-
-        one_range_value = (background_cycle_start is None) != (
-            background_cycle_end is None
-        )
-        if one_range_value:
-            raise ValueError(
-                "--background-cycle-start and --background-cycle-end must be "
-                "provided together."
-            )
-
-        if (
-            background_cycle_start is not None
-            and background_cycle_end is not None
-            and background_cycle_start < 1
-        ):
-            raise ValueError("--background-cycle-start must be at least 1.")
-
-        if (
-            background_cycle_start is not None
-            and background_cycle_end is not None
-            and background_cycle_end < 1
-        ):
-            raise ValueError("--background-cycle-end must be at least 1.")
-
-        if (
-            background_cycle_start is not None
-            and background_cycle_end is not None
-            and background_cycle_start > background_cycle_end
-        ):
-            raise ValueError(
-                "--background-cycle-start cannot be greater than "
-                "--background-cycle-end."
-            )
-
-
-def validate_visual_options(
-    title_slide_overlay_transparency: float,
-    vocab_slide_overlay_transparency: float,
-    title_card_transparency: float,
-    vocab_card_transparency: float,
-) -> None:
-    if not 0.0 <= title_slide_overlay_transparency <= 1.0:
-        raise ValueError(
-            "--title-slide-overlay-transparency must be between 0.0 and 1.0."
-        )
-    if not 0.0 <= vocab_slide_overlay_transparency <= 1.0:
-        raise ValueError(
-            "--vocab-slide-overlay-transparency must be between 0.0 and 1.0."
-        )
-    if not 0.0 <= title_card_transparency <= 1.0:
-        raise ValueError("--title-card-transparency must be between 0.0 and 1.0.")
-    if not 0.0 <= vocab_card_transparency <= 1.0:
-        raise ValueError("--vocab-card-transparency must be between 0.0 and 1.0.")
-
-
 def is_valid_image(path: Path) -> bool:
     try:
         with Image.open(path) as im:
@@ -431,64 +311,6 @@ def resolve_background_image(
     if len(bg_pool) == 1:
         return bg_pool[0]
     return bg_pool[generated_slide_index % len(bg_pool)]
-
-
-def read_vocab_csv(csv_path: Path, min_rows: int = 10) -> List[VocabPair]:
-    rows: List[VocabPair] = []
-    with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f)
-        if reader.fieldnames is None:
-            raise ValueError("CSV file is empty or missing a header row.")
-
-        field_map = {
-            name.strip().lower(): name for name in reader.fieldnames if name is not None
-        }
-        if "term" not in field_map or "definition" not in field_map:
-            raise ValueError(
-                "CSV must contain headers for both Term and Definition "
-                "(case-insensitive)."
-            )
-
-        term_key = field_map["term"]
-        definition_key = field_map["definition"]
-
-        for row in reader:
-            term = (row.get(term_key) or "").strip()
-            definition = (row.get(definition_key) or "").strip()
-            if not term and not definition:
-                continue
-            if not term or not definition:
-                raise ValueError(
-                    f"Found incomplete row: Term={term!r}, Definition={definition!r}"
-                )
-            rows.append((term, definition))
-
-    unique: List[VocabPair] = []
-    seen = set()
-    for pair in rows:
-        if pair not in seen:
-            unique.append(pair)
-            seen.add(pair)
-
-    if len(unique) < min_rows:
-        raise ValueError(
-            f"CSV must contain at least {min_rows} unique Term/Definition pairs; "
-            f"found {len(unique)}."
-        )
-
-    return unique
-
-
-def random_sets(
-    vocab: List[VocabPair],
-    set_count: int = 6,
-    set_size: int = 10,
-    seed: int = 42,
-):
-    if len(vocab) < set_size:
-        raise ValueError(f"Need at least {set_size} unique items; got {len(vocab)}.")
-    rng = random.Random(seed)
-    return [rng.sample(vocab, set_size) for _ in range(set_count)]
 
 
 def set_shape_fill_transparency(shape, transparency: float) -> None:
