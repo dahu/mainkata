@@ -7,7 +7,7 @@ from mainkata.backgrounds import build_background_pool
 from mainkata.config import (load_style_config, resolve_title_slide_style,
                              resolve_vocab_slide_style)
 from mainkata.domain import (BackgroundOptions, GenerationOptions,
-                             VisualOptions, random_sets,
+                             GenerationResult, VisualOptions, random_sets,
                              validate_background_options,
                              validate_generation_options,
                              validate_visual_options)
@@ -65,7 +65,7 @@ def generate_from_inputs(
     generation: GenerationOptions = GenerationOptions(),
     background: BackgroundOptions = BackgroundOptions(),
     visual: VisualOptions = VisualOptions(),
-):
+) -> GenerationResult:
     validate_generation_options(
         generation.set_count,
         generation.set_size,

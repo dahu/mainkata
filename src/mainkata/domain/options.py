@@ -7,6 +7,12 @@ from .types import BackgroundMode, PrimarySide
 
 
 @dataclass(frozen=True)
+class GenerationResult:
+    pptx_path: Path
+    selected_terms_csv_path: Path | None = None
+
+
+@dataclass(frozen=True)
 class GenerationOptions:
     set_count: int = 6
     set_size: int = 10

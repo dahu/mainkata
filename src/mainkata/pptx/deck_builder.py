@@ -6,7 +6,8 @@ from pptx import Presentation
 from pptx.util import Inches
 
 from mainkata.backgrounds import resolve_background_image
-from mainkata.domain.options import BackgroundOptions, GenerationOptions
+from mainkata.domain.options import (BackgroundOptions, GenerationOptions,
+                                     GenerationResult)
 from mainkata.io.selected_terms_csv import write_selected_terms_csv
 
 from .slides import add_title_slide, add_vocab_slide
@@ -77,4 +78,7 @@ def build_pptx(
     if generation.export_selected_terms:
         csv_out = write_selected_terms_csv(output_path, rows)
 
-    return output_path, csv_out
+    return GenerationResult(
+        pptx_path=output_path,
+        selected_terms_csv_path=csv_out,
+    )

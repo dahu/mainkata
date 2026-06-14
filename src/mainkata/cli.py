@@ -5,7 +5,8 @@ import argparse
 import traceback
 from pathlib import Path
 
-from mainkata.domain import BackgroundOptions, GenerationOptions, VisualOptions
+from mainkata.domain import (BackgroundOptions, GenerationOptions,
+                             GenerationResult, VisualOptions)
 from mainkata.io import resolve_output_path
 from mainkata.services.generator import generate_from_inputs
 
@@ -216,7 +217,7 @@ def main() -> None:
     )
 
     try:
-        pptx_path, csv_out = generate_from_inputs(
+        result = generate_from_inputs(
             csv_file=csv_path,
             output=output_path,
             style_config_file=args.style_config,
@@ -229,9 +230,9 @@ def main() -> None:
             traceback.print_exc()
         parser.exit(1, f"Error: {exc}\n")
 
-    print(f"Created: {pptx_path}")
-    if csv_out:
-        print(f"Created: {csv_out}")
+    print(f"Created: {result.pptx_path}")
+    if result.selected_terms_csv_path:
+        print(f"Created: {result.selected_terms_csv_path}")
 
 
 if __name__ == "__main__":

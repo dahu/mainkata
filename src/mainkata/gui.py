@@ -646,7 +646,7 @@ class VocabPptxGui(tk.Tk):
                     f"Vocab card transparency override: {visual.vocab_card_transparency}"
                 )
 
-            pptx_path, csv_out = generate_from_inputs(
+            result = generate_from_inputs(
                 csv_file=csv_file,
                 output=str(output_path),
                 style_config_file=style_config_file,
@@ -656,12 +656,14 @@ class VocabPptxGui(tk.Tk):
             )
 
             self.status_var.set("Generation complete.")
-            self.append_log(f"Created: {pptx_path}")
-            if csv_out:
-                self.append_log(f"Created: {csv_out}")
-                done_message = f"Created:\n{pptx_path}\n{csv_out}"
+            self.append_log(f"Created: {result.pptx_path}")
+            if result.selected_terms_csv_path:
+                self.append_log(f"Created: {result.selected_terms_csv_path}")
+                done_message = (
+                    f"Created:\n{result.pptx_path}\n{result.selected_terms_csv_path}"
+                )
             else:
-                done_message = f"Created:\n{pptx_path}"
+                done_message = f"Created:\n{result.pptx_path}"
 
             messagebox.showinfo("Done", done_message, parent=self)
 
