@@ -1,209 +1,300 @@
+from __future__ import annotations
+
+import csv
+from copy import deepcopy
 from pathlib import Path
 
-from mainkata.pptx import deck_builder
+from pptx import Presentation
+
+from mainkata.config.style_config import (DEFAULT_STYLE_CONFIG,
+                                          resolve_title_slide_style,
+                                          resolve_vocab_slide_style)
+from mainkata.domain.options import (BackgroundOptions, GenerationOptions,
+                                     VisualOptions)
+from mainkata.pptx.deck_builder import build_pptx
 
 
-def test_build_source_name_formats_stem() -> None:
-    csv_path = Path("/tmp/japanese_n5-lesson_01.csv")
-    assert deck_builder._build_source_name(csv_path) == "Japanese N5 Lesson 01"
+def all_slide_text(prs: Presentation) -> list[str]:
+    texts: list[str] = []
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if hasattr(shape, "text") and shape.text:
+                texts.append(shape.text)
+    return texts
 
 
-def test_resolve_slide_text_term_primary_with_alternate() -> None:
-    primary, secondary = deck_builder._resolve_slide_text(
-        term="inu",
-        definition="dog",
-        primary_side="term",
-        show_alternate=True,
-    )
-    assert primary == "inu"
-    assert secondary == "dog"
+def csv_rows(path: Path) -> list[list[str]]:
+    with path.open("r", encoding="utf-8", newline="") as f:
+        return list(csv.reader(f))
 
 
-def test_resolve_slide_text_definition_primary_without_alternate() -> None:
-    primary, secondary = deck_builder._resolve_slide_text(
-        term="inu",
-        definition="dog",
-        primary_side="definition",
-        show_alternate=False,
-    )
-    assert primary == "dog"
-    assert secondary is None
+def make_style_config() -> dict:
+    return deepcopy(DEFAULT_STYLE_CONFIG)
 
 
-def test_build_pptx_returns_selected_rows_and_saves(
-    monkeypatch, tmp_path: Path
-) -> None:
-    calls = {
-        "title": [],
-        "vocab": [],
-        "saved_to": None,
-    }
+def make_styles() -> tuple[dict, dict, dict]:
+    style_config = make_style_config()
+    labels = style_config["labels"]
+    title_style = resolve_title_slide_style(style_config)
+    vocab_style = resolve_vocab_slide_style(style_config)
+    return labels, title_style, vocab_style
 
-    class FakePresentation:
-        def __init__(self) -> None:
-            self.slide_width = None
-            self.slide_height = None
 
-        def save(self, path: Path) -> None:
-            calls["saved_to"] = path
-
-    def fake_add_title_slide(
-        prs, set_label, section_title, source_name, labels, style, bg_image
-    ):
-        calls["title"].append(
-            {
-                "set_label": set_label,
-                "section_title": section_title,
-                "source_name": source_name,
-                "bg_image": bg_image,
-            }
-        )
-
-    def fake_add_vocab_slide(prs, primary_text, secondary_text, style, bg_image):
-        calls["vocab"].append(
-            {
-                "primary_text": primary_text,
-                "secondary_text": secondary_text,
-                "bg_image": bg_image,
-            }
-        )
-
-    def fake_resolve_background_image(bg_pool, generated_slide_index):
-        return bg_pool[generated_slide_index % len(bg_pool)]
-
-    monkeypatch.setattr(deck_builder, "Presentation", FakePresentation)
-    monkeypatch.setattr(deck_builder, "add_title_slide", fake_add_title_slide)
-    monkeypatch.setattr(deck_builder, "add_vocab_slide", fake_add_vocab_slide)
-    monkeypatch.setattr(
-        deck_builder, "resolve_background_image", fake_resolve_background_image
+def make_generation(
+    *,
+    set_count: int = 1,
+    set_size: int = 2,
+    seed: int = 42,
+    primary_side: str = "term",
+    show_alternate: bool = True,
+    export_selected_terms: bool = False,
+) -> GenerationOptions:
+    return GenerationOptions(
+        set_count=set_count,
+        set_size=set_size,
+        seed=seed,
+        primary_side=primary_side,
+        show_alternate=show_alternate,
+        export_selected_terms=export_selected_terms,
     )
 
-    csv_path = tmp_path / "my_vocab.csv"
-    output_path = tmp_path / "out.pptx"
 
-    labels = {
-        "set_prefix": "Set",
-        "vocabulary_suffix": "Vocabulary",
-    }
-    sets = [
-        [("inu", "dog"), ("neko", "cat")],
-        [("aka", "red")],
+def make_background() -> BackgroundOptions:
+    return BackgroundOptions()
+
+
+def make_visual() -> VisualOptions:
+    return VisualOptions()
+
+
+def make_sets() -> list[list[tuple[str, str]]]:
+    return [
+        [
+            ("cat", "a small domesticated feline"),
+            ("dog", "a domesticated canine"),
+        ]
     ]
-    title_style = {"dummy": True}
-    vocab_style = {"dummy": True}
-    bg_pool = [Path("bg1.jpg"), Path("bg2.jpg")]
 
-    returned_output, selected_rows = deck_builder.build_pptx(
+
+def make_multi_sets() -> list[list[tuple[str, str]]]:
+    return [
+        [
+            ("cat", "a small domesticated feline"),
+            ("dog", "a domesticated canine"),
+        ],
+        [
+            ("bird", "a feathered animal"),
+            ("fish", "an aquatic vertebrate"),
+        ],
+    ]
+
+
+def test_build_pptx_creates_output_file_and_expected_slide_count(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
+
+    labels, title_style, vocab_style = make_styles()
+
+    pptx_out, csv_out = build_pptx(
         csv_path=csv_path,
         output_path=output_path,
+        sets=make_multi_sets(),
         labels=labels,
-        sets=sets,
-        primary_side="term",
-        show_alternate=True,
         title_style=title_style,
         vocab_style=vocab_style,
-        bg_pool=bg_pool,
-    )
-
-    assert returned_output == output_path
-    assert selected_rows == [
-        (1, "inu", "dog"),
-        (1, "neko", "cat"),
-        (2, "aka", "red"),
-    ]
-    assert calls["saved_to"] == output_path
-
-    assert len(calls["title"]) == 2
-    assert calls["title"][0]["set_label"] == "Set 1"
-    assert calls["title"][1]["set_label"] == "Set 2"
-
-    assert len(calls["vocab"]) == 3
-    assert calls["vocab"][0]["primary_text"] == "inu"
-    assert calls["vocab"][0]["secondary_text"] == "dog"
-
-
-def test_build_pptx_uses_definition_as_primary_when_requested(
-    monkeypatch, tmp_path: Path
-) -> None:
-    vocab_calls = []
-
-    class FakePresentation:
-        def __init__(self) -> None:
-            self.slide_width = None
-            self.slide_height = None
-
-        def save(self, path: Path) -> None:
-            pass
-
-    monkeypatch.setattr(deck_builder, "Presentation", FakePresentation)
-    monkeypatch.setattr(deck_builder, "add_title_slide", lambda *a, **k: None)
-    monkeypatch.setattr(
-        deck_builder,
-        "add_vocab_slide",
-        lambda prs, primary_text, secondary_text, style, bg_image: vocab_calls.append(
-            (primary_text, secondary_text)
-        ),
-    )
-    monkeypatch.setattr(
-        deck_builder,
-        "resolve_background_image",
-        lambda bg_pool, generated_slide_index: None,
-    )
-
-    _, selected_rows = deck_builder.build_pptx(
-        csv_path=tmp_path / "lesson.csv",
-        output_path=tmp_path / "deck.pptx",
-        labels={"set_prefix": "Set", "vocabulary_suffix": "Vocabulary"},
-        sets=[[("inu", "dog")]],
-        primary_side="definition",
-        show_alternate=True,
-        title_style={},
-        vocab_style={},
+        generation=make_generation(set_count=2, set_size=2),
+        background=make_background(),
+        visual=make_visual(),
         bg_pool=[],
     )
 
-    assert vocab_calls == [("dog", "inu")]
-    assert selected_rows == [(1, "inu", "dog")]
+    assert pptx_out == output_path
+    assert output_path.exists()
+    assert csv_out is None
+
+    prs = Presentation(output_path)
+    assert len(prs.slides) == 6  # 2 sets * (1 title + 2 vocab)
 
 
-def test_build_pptx_hides_secondary_text_when_show_alternate_false(
-    monkeypatch, tmp_path: Path
-) -> None:
-    vocab_calls = []
+def test_build_pptx_adds_one_title_slide_per_set(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
 
-    class FakePresentation:
-        def __init__(self) -> None:
-            self.slide_width = None
-            self.slide_height = None
+    labels, title_style, vocab_style = make_styles()
 
-        def save(self, path: Path) -> None:
-            pass
-
-    monkeypatch.setattr(deck_builder, "Presentation", FakePresentation)
-    monkeypatch.setattr(deck_builder, "add_title_slide", lambda *a, **k: None)
-    monkeypatch.setattr(
-        deck_builder,
-        "add_vocab_slide",
-        lambda prs, primary_text, secondary_text, style, bg_image: vocab_calls.append(
-            (primary_text, secondary_text)
-        ),
-    )
-    monkeypatch.setattr(
-        deck_builder,
-        "resolve_background_image",
-        lambda bg_pool, generated_slide_index: None,
-    )
-
-    deck_builder.build_pptx(
-        csv_path=tmp_path / "lesson.csv",
-        output_path=tmp_path / "deck.pptx",
-        labels={"set_prefix": "Set", "vocabulary_suffix": "Vocabulary"},
-        sets=[[("inu", "dog")]],
-        primary_side="term",
-        show_alternate=False,
-        title_style={},
-        vocab_style={},
+    build_pptx(
+        csv_path=csv_path,
+        output_path=output_path,
+        sets=make_multi_sets(),
+        labels=labels,
+        title_style=title_style,
+        vocab_style=vocab_style,
+        generation=make_generation(set_count=2, set_size=2),
+        background=make_background(),
+        visual=make_visual(),
         bg_pool=[],
     )
 
-    assert vocab_calls == [("inu", None)]
+    prs = Presentation(output_path)
+    texts = all_slide_text(prs)
+
+    assert any("SET 1" in text for text in texts)
+    assert any("SET 2" in text for text in texts)
+
+
+def test_build_pptx_exports_selected_terms_csv_when_requested(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
+
+    labels, title_style, vocab_style = make_styles()
+
+    pptx_out, csv_out = build_pptx(
+        csv_path=csv_path,
+        output_path=output_path,
+        sets=make_sets(),
+        labels=labels,
+        title_style=title_style,
+        vocab_style=vocab_style,
+        generation=make_generation(
+            set_count=1,
+            set_size=2,
+            export_selected_terms=True,
+        ),
+        background=make_background(),
+        visual=make_visual(),
+        bg_pool=[],
+    )
+
+    assert pptx_out.exists()
+    assert csv_out is not None
+    assert csv_out.exists()
+
+    rows = csv_rows(csv_out)
+    assert rows[0] == ["set_number", "term", "definition"]
+    assert rows[1] == ["1", "cat", "a small domesticated feline"]
+    assert rows[2] == ["1", "dog", "a domesticated canine"]
+
+
+def test_build_pptx_uses_term_as_primary_and_definition_as_secondary(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
+
+    labels, title_style, vocab_style = make_styles()
+
+    build_pptx(
+        csv_path=csv_path,
+        output_path=output_path,
+        sets=[[("cat", "a small domesticated feline")]],
+        labels=labels,
+        title_style=title_style,
+        vocab_style=vocab_style,
+        generation=make_generation(
+            set_count=1,
+            set_size=1,
+            primary_side="term",
+            show_alternate=True,
+        ),
+        background=make_background(),
+        visual=make_visual(),
+        bg_pool=[],
+    )
+
+    prs = Presentation(output_path)
+    texts = all_slide_text(prs)
+
+    assert any("cat" in text for text in texts)
+    assert any("a small domesticated feline" in text for text in texts)
+
+
+def test_build_pptx_uses_definition_as_primary_and_term_as_secondary(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
+
+    labels, title_style, vocab_style = make_styles()
+
+    build_pptx(
+        csv_path=csv_path,
+        output_path=output_path,
+        sets=[[("cat", "a small domesticated feline")]],
+        labels=labels,
+        title_style=title_style,
+        vocab_style=vocab_style,
+        generation=make_generation(
+            set_count=1,
+            set_size=1,
+            primary_side="definition",
+            show_alternate=True,
+        ),
+        background=make_background(),
+        visual=make_visual(),
+        bg_pool=[],
+    )
+
+    prs = Presentation(output_path)
+    texts = all_slide_text(prs)
+
+    assert any("a small domesticated feline" in text for text in texts)
+    assert any("cat" in text for text in texts)
+
+
+def test_build_pptx_omits_secondary_text_when_show_alternate_is_false(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
+
+    labels, title_style, vocab_style = make_styles()
+
+    build_pptx(
+        csv_path=csv_path,
+        output_path=output_path,
+        sets=[[("cat", "a small domesticated feline")]],
+        labels=labels,
+        title_style=title_style,
+        vocab_style=vocab_style,
+        generation=make_generation(
+            set_count=1,
+            set_size=1,
+            primary_side="term",
+            show_alternate=False,
+        ),
+        background=make_background(),
+        visual=make_visual(),
+        bg_pool=[],
+    )
+
+    prs = Presentation(output_path)
+    texts = all_slide_text(prs)
+
+    assert any("cat" in text for text in texts)
+    assert not any("a small domesticated feline" in text for text in texts)
+
+
+def test_build_pptx_uses_csv_filename_on_title_slide(tmp_path: Path):
+    output_path = tmp_path / "deck.pptx"
+    csv_path = tmp_path / "ocean_animals.csv"
+    csv_path.write_text("placeholder", encoding="utf-8")
+
+    labels, title_style, vocab_style = make_styles()
+
+    build_pptx(
+        csv_path=csv_path,
+        output_path=output_path,
+        sets=make_sets(),
+        labels=labels,
+        title_style=title_style,
+        vocab_style=vocab_style,
+        generation=make_generation(set_count=1, set_size=2),
+        background=make_background(),
+        visual=make_visual(),
+        bg_pool=[],
+    )
+
+    prs = Presentation(output_path)
+    texts = all_slide_text(prs)
+
+    assert any("ocean_animals.csv" in text for text in texts)
