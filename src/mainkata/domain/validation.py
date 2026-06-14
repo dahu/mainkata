@@ -1,4 +1,6 @@
-from mainkata.domain.types import BackgroundMode, PrimarySide
+from __future__ import annotations
+
+from .types import BackgroundMode, PrimarySide
 
 
 def validate_generation_options(
@@ -15,7 +17,7 @@ def validate_generation_options(
 
 
 def validate_background_options(
-    background_dir: str | None,
+    background_dir,
     background_mode: BackgroundMode,
     background_image_number: int | None,
     background_cycle_start: int | None,
@@ -30,8 +32,7 @@ def validate_background_options(
     if background_mode == "fixed":
         if background_image_number is None or background_image_number < 1:
             raise ValueError(
-                "--background-image-number must be >= 1 when "
-                "--background-mode=fixed."
+                "--background-image-number must be >= 1 when --background-mode=fixed."
             )
         if background_cycle_start is not None or background_cycle_end is not None:
             raise ValueError(

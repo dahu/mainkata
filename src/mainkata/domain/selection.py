@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import random
 
-from mainkata.domain.types import VocabPair
+from .types import VocabPair
 
 
 def random_sets(
@@ -8,7 +10,7 @@ def random_sets(
     set_count: int = 6,
     set_size: int = 10,
     seed: int = 42,
-):
+) -> list[list[VocabPair]]:
     if len(vocab) < set_size:
         raise ValueError(f"Need at least {set_size} unique items; got {len(vocab)}.")
     rng = random.Random(seed)

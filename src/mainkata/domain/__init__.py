@@ -1,3 +1,4 @@
+from .options import BackgroundOptions, GenerationOptions, VisualOptions
 from .selection import random_sets
 from .types import BackgroundMode, PrimarySide, VocabPair
 from .validation import (validate_background_options,
@@ -5,7 +6,10 @@ from .validation import (validate_background_options,
 
 __all__ = [
     "BackgroundMode",
+    "BackgroundOptions",
+    "GenerationOptions",
     "PrimarySide",
+    "VisualOptions",
     "VocabPair",
     "random_sets",
     "validate_background_options",

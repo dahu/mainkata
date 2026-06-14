@@ -8,9 +8,9 @@ from typing import Any
 from pptx.dml.color import RGBColor
 
 try:
-    import tomllib  # Python 3.11+
+    import tomllib
 except ModuleNotFoundError:
-    import tomli as tomllib  # pip install tomli
+    import tomli as tomllib
 
 
 DEFAULT_STYLE_CONFIG: dict[str, Any] = {
@@ -32,36 +32,12 @@ DEFAULT_STYLE_CONFIG: dict[str, Any] = {
             }
         },
         "fonts": {
-            "title_pill": {
-                "name": "Aptos",
-                "size": 16,
-                "bold": True,
-            },
-            "title_main": {
-                "name": "Aptos Display",
-                "size": 28,
-                "bold": True,
-            },
-            "title_section": {
-                "name": "Aptos Display",
-                "size": 24,
-                "bold": True,
-            },
-            "body": {
-                "name": "Aptos",
-                "size": 16,
-                "bold": False,
-            },
-            "vocab_primary": {
-                "name": "Aptos Display",
-                "size": 24,
-                "bold": True,
-            },
-            "vocab_secondary": {
-                "name": "Aptos",
-                "size": 20,
-                "bold": False,
-            },
+            "title_pill": {"name": "Aptos", "size": 16, "bold": True},
+            "title_main": {"name": "Aptos Display", "size": 28, "bold": True},
+            "title_section": {"name": "Aptos Display", "size": 24, "bold": True},
+            "body": {"name": "Aptos", "size": 16, "bold": False},
+            "vocab_primary": {"name": "Aptos Display", "size": 24, "bold": True},
+            "vocab_secondary": {"name": "Aptos", "size": 20, "bold": False},
         },
     },
     "styles": {
@@ -99,10 +75,11 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
 
 def get_default_style_config_path() -> Path:
     xdg_config_home = os.environ.get("XDG_CONFIG_HOME", "").strip()
-    if xdg_config_home:
-        config_home = Path(xdg_config_home).expanduser()
-    else:
-        config_home = Path.home() / ".config"
+    config_home = (
+        Path(xdg_config_home).expanduser()
+        if xdg_config_home
+        else Path.home() / ".config"
+    )
     return config_home / "mainkata" / "style.toml"
 
 
@@ -120,7 +97,6 @@ def resolve_style_config_path(
     default_path = get_default_style_config_path().resolve()
     if default_path.exists() and default_path.is_file():
         return default_path
-
     return None
 
 
@@ -151,8 +127,9 @@ def resolve_color_palette(
     palettes = style_config["palettes"]["colors"]
     if palette_name not in palettes:
         raise ValueError(f"Unknown color palette: {palette_name}")
-    palette = palettes[palette_name]
-    return {key: hex_to_rgb_color(value) for key, value in palette.items()}
+    return {
+        key: hex_to_rgb_color(value) for key, value in palettes[palette_name].items()
+    }
 
 
 def resolve_font_palette(
@@ -193,31 +170,3 @@ def resolve_vocab_slide_style(style_config: dict[str, Any]) -> dict[str, Any]:
         "show_card": bool(style["show_card"]),
         "card_transparency": float(style["card_transparency"]),
     }
-
-
-def resolve_effective_slide_styles(
-    style_config: Dict[str, Any],
-    title_slide_overlay_transparency: float | None = None,
-    vocab_slide_overlay_transparency: float | None = None,
-    show_title_card: bool | None = None,
-    title_card_transparency: float | None = None,
-    show_vocab_card: bool | None = None,
-    vocab_card_transparency: float | None = None,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    title_style = resolve_title_slide_style(style_config)
-    vocab_style = resolve_vocab_slide_style(style_config)
-
-    if title_slide_overlay_transparency is not None:
-        title_style["overlay_transparency"] = title_slide_overlay_transparency
-    if vocab_slide_overlay_transparency is not None:
-        vocab_style["overlay_transparency"] = vocab_slide_overlay_transparency
-    if show_title_card is not None:
-        title_style["show_card"] = show_title_card
-    if title_card_transparency is not None:
-        title_style["card_transparency"] = title_card_transparency
-    if show_vocab_card is not None:
-        vocab_style["show_card"] = show_vocab_card
-    if vocab_card_transparency is not None:
-        vocab_style["card_transparency"] = vocab_card_transparency
-
-    return title_style, vocab_style

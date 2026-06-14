@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
-
-from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
-from mainkata.pptx.backgrounds import add_soft_overlay, apply_slide_background
-from mainkata.pptx.theme import (apply_font, resolve_vocab_primary_font,
-                                 set_shape_fill_transparency)
+from .backgrounds import add_soft_overlay, apply_slide_background
+from .theme import (apply_font, resolve_vocab_primary_font,
+                    set_shape_fill_transparency)
 
 
-def add_title_card(slide, colors: dict[str, RGBColor]):
+def add_title_card(slide, colors):
     card = slide.shapes.add_shape(
         MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
         Inches(0.7),
@@ -33,9 +29,9 @@ def add_title_slide(
     set_label: str,
     section_title: str,
     source_name: str,
-    labels: dict[str, str],
-    style: dict[str, Any],
-    bg_image: Path | None = None,
+    labels,
+    style,
+    bg_image=None,
 ):
     colors = style["colors"]
 
@@ -111,8 +107,8 @@ def add_vocab_slide(
     prs,
     primary_text: str,
     secondary_text: str | None,
-    style: dict[str, Any],
-    bg_image: Path | None = None,
+    style,
+    bg_image=None,
 ):
     colors = style["colors"]
 

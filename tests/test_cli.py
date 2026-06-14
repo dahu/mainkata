@@ -54,8 +54,8 @@ class TestCliHappyPath:
         )
 
         # Assert: function was called with mapped arguments
-        assert called["csv_file"] == str(csv_path)
-        assert called["output"] == str(output_path)
+        assert called["csv_file"] == csv_path
+        assert called["output"] == output_path
         assert called["set_count"] == 3
         assert called["set_size"] == 5
         assert called["seed"] == 99

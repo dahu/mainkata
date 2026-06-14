@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import csv
 from pathlib import Path
 
@@ -6,6 +8,7 @@ from mainkata.domain.types import VocabPair
 
 def read_vocab_csv(csv_path: Path, min_rows: int = 10) -> list[VocabPair]:
     rows: list[VocabPair] = []
+
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames is None:
@@ -35,7 +38,7 @@ def read_vocab_csv(csv_path: Path, min_rows: int = 10) -> list[VocabPair]:
             rows.append((term, definition))
 
     unique: list[VocabPair] = []
-    seen = set()
+    seen: set[VocabPair] = set()
     for pair in rows:
         if pair not in seen:
             unique.append(pair)

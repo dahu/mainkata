@@ -6,10 +6,9 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from mainkata.services.generator import (
-    generate_from_inputs,
-    resolve_output_path,
-)
+from mainkata.domain import BackgroundOptions, GenerationOptions, VisualOptions
+from mainkata.services.generator import (generate_from_inputs,
+                                         resolve_output_path)
 
 
 class VocabPptxGui(tk.Tk):
@@ -729,23 +728,29 @@ class VocabPptxGui(tk.Tk):
                 csv_file=csv_file,
                 output=str(output_path),
                 style_config_file=style_config_file,
-                set_count=set_count,
-                set_size=set_size,
-                seed=seed,
-                primary_side=primary_side,
-                show_alternate=show_alternate,
-                export_selected_terms=export_selected_terms,
-                background_dir=background_dir,
-                background_mode=background_mode,
-                background_image_number=background_image_number,
-                background_cycle_start=background_cycle_start,
-                background_cycle_end=background_cycle_end,
-                title_slide_overlay_transparency=title_slide_overlay_transparency,
-                vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
-                show_title_card=show_title_card,
-                title_card_transparency=title_card_transparency,
-                show_vocab_card=show_vocab_card,
-                vocab_card_transparency=vocab_card_transparency,
+                generation=GenerationOptions(
+                    set_count=set_count,
+                    set_size=set_size,
+                    seed=seed,
+                    primary_side=primary_side,
+                    show_alternate=show_alternate,
+                    export_selected_terms=export_selected_terms,
+                ),
+                background=BackgroundOptions(
+                    background_dir=background_dir,
+                    background_mode=background_mode,
+                    background_image_number=background_image_number,
+                    background_cycle_start=background_cycle_start,
+                    background_cycle_end=background_cycle_end,
+                ),
+                visual=VisualOptions(
+                    title_slide_overlay_transparency=title_slide_overlay_transparency,
+                    vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
+                    show_title_card=show_title_card,
+                    title_card_transparency=title_card_transparency,
+                    show_vocab_card=show_vocab_card,
+                    vocab_card_transparency=vocab_card_transparency,
+                ),
             )
 
             self.status_var.set("Generation complete.")
