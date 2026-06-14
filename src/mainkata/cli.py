@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import traceback
 from pathlib import Path
 
 from mainkata.domain import BackgroundOptions, GenerationOptions, VisualOptions
@@ -14,7 +15,11 @@ def build_parser() -> argparse.ArgumentParser:
         description="Generate a PowerPoint deck from one Term-Definition CSV file.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print full tracebacks on error",
+    )
     parser.add_argument(
         "csvfile",
         help="Path to the input CSV file with headers Term, Definition",
@@ -220,6 +225,8 @@ def main() -> None:
             visual=visual,
         )
     except Exception as exc:
+        if getattr(args, "debug", False):
+            traceback.print_exc()
         parser.exit(1, f"Error: {exc}\n")
 
     print(f"Created: {pptx_path}")

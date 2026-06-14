@@ -16,19 +16,19 @@ except ModuleNotFoundError:
 DEFAULT_STYLE_CONFIG: dict[str, Any] = {
     "labels": {
         "game_title": "Vocabulary Games",
-        "source_prefix": "Source:",
+        "source_prefix": "Source",
         "set_prefix": "Set",
         "vocabulary_suffix": "Vocabulary",
     },
     "palettes": {
         "colors": {
             "default": {
-                "bg": "#F0F7FF",
-                "blue": "#2563EB",
-                "text": "#0F172A",
-                "subtext": "#475569",
-                "coral": "#F97066",
-                "white": "#FFFFFF",
+                "bg": "F0F7FF",
+                "blue": "2563EB",
+                "text": "0F172A",
+                "subtext": "475569",
+                "coral": "F97066",
+                "white": "FFFFFF",
             }
         },
         "fonts": {
@@ -111,14 +111,27 @@ def load_style_config(style_config_file: str | Path | None = None) -> dict[str, 
     return deep_merge_dicts(DEFAULT_STYLE_CONFIG, loaded)
 
 
+# def hex_to_rgb_color(value: str) -> RGBColor:
+#     text = value.strip().lstrip("#")
+#     if len(text) != 6:
+#         raise ValueError(f"Invalid hex color value: {value!r}")
+#     try:
+#         r = int(text[0:2], 16)
+#         g = int(text[2:4], 16)
+#         b = int(text[4:6], 16)
+#         return RGBColor(r, g, b)
+#     except ValueError as exc:
+#         raise ValueError(f"Invalid hex color value: {value!r}") from exc
+
+
 def hex_to_rgb_color(value: str) -> RGBColor:
     text = value.strip().lstrip("#")
     if len(text) != 6:
-        raise ValueError(f"Invalid hex color: {value!r}")
+        raise ValueError(f"Invalid hex color value: {value!r}")
     try:
         return RGBColor.from_string(text.upper())
     except ValueError as exc:
-        raise ValueError(f"Invalid hex color: {value!r}") from exc
+        raise ValueError(f"Invalid hex color value: {value!r}") from exc
 
 
 def resolve_color_palette(

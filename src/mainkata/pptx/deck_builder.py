@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-import csv
 from pathlib import Path
 
 from pptx import Presentation
 from pptx.util import Inches
 
 from mainkata.backgrounds import resolve_background_image
-from mainkata.domain.options import (BackgroundOptions, GenerationOptions,
-                                     VisualOptions)
-from mainkata.domain.validation import validate_visual_options
+from mainkata.domain.options import BackgroundOptions, GenerationOptions
+from mainkata.io.selected_terms_csv import write_selected_terms_csv
 
 from .slides import add_title_slide, add_vocab_slide
 
@@ -23,29 +21,8 @@ def build_pptx(
     vocab_style,
     generation: GenerationOptions,
     background: BackgroundOptions,
-    visual: VisualOptions,
     bg_pool,
 ):
-    if visual.title_slide_overlay_transparency is not None:
-        title_style["overlay_transparency"] = visual.title_slide_overlay_transparency
-    if visual.vocab_slide_overlay_transparency is not None:
-        vocab_style["overlay_transparency"] = visual.vocab_slide_overlay_transparency
-    if visual.show_title_card is not None:
-        title_style["show_card"] = visual.show_title_card
-    if visual.title_card_transparency is not None:
-        title_style["card_transparency"] = visual.title_card_transparency
-    if visual.show_vocab_card is not None:
-        vocab_style["show_card"] = visual.show_vocab_card
-    if visual.vocab_card_transparency is not None:
-        vocab_style["card_transparency"] = visual.vocab_card_transparency
-
-    validate_visual_options(
-        title_slide_overlay_transparency=title_style["overlay_transparency"],
-        vocab_slide_overlay_transparency=vocab_style["overlay_transparency"],
-        title_card_transparency=title_style["card_transparency"],
-        vocab_card_transparency=vocab_style["card_transparency"],
-    )
-
     prs = Presentation()
     prs.slide_width = Inches(13.333)
     prs.slide_height = Inches(7.5)
@@ -98,10 +75,6 @@ def build_pptx(
 
     csv_out = None
     if generation.export_selected_terms:
-        csv_out = output_path.with_name(output_path.stem + "_selected_terms.csv")
-        with csv_out.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["set_number", "term", "definition"])
-            writer.writerows(rows)
+        csv_out = write_selected_terms_csv(output_path, rows)
 
     return output_path, csv_out
