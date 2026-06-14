@@ -4,7 +4,8 @@ from pathlib import Path
 from typing import Any
 
 from mainkata.backgrounds import build_background_pool
-from mainkata.config import (load_style_config, resolve_title_slide_style,
+from mainkata.config import (TitleSlideStyle, VocabSlideStyle,
+                             load_style_config, resolve_title_slide_style,
                              resolve_vocab_slide_style)
 from mainkata.domain import (BackgroundOptions, GenerationOptions,
                              GenerationResult, VisualOptions, random_sets,
@@ -19,7 +20,7 @@ def apply_visual_overrides(
     title_style: dict[str, Any],
     vocab_style: dict[str, Any],
     visual: VisualOptions,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[TitleSlideStyle, VocabSlideStyle]:
     final_title_style = dict(title_style)
     final_vocab_style = dict(vocab_style)
 

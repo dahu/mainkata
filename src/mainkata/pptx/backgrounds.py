@@ -5,10 +5,12 @@ from pathlib import Path
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 from pptx.util import Inches
 
+from mainkata.config import ColorPalette
+
 from .theme import set_shape_fill_transparency
 
 
-def add_default_background(slide, colors):
+def add_default_background(slide, colors: ColorPalette):
     fill = slide.background.fill
     fill.solid()
     fill.fore_color.rgb = colors["bg"]
@@ -42,7 +44,7 @@ def add_image_background(prs, slide, image_path: Path):
     slide.shapes._spTree.insert(2, pic._element)
 
 
-def add_soft_overlay(prs, slide, transparency: float, colors):
+def add_soft_overlay(prs, slide, transparency: float, colors: ColorPalette):
     overlay = slide.shapes.add_shape(
         MSO_AUTO_SHAPE_TYPE.RECTANGLE,
         0,
@@ -56,7 +58,9 @@ def add_soft_overlay(prs, slide, transparency: float, colors):
     overlay.line.fill.background()
 
 
-def apply_slide_background(prs, slide, colors, bg_image: Path | None = None):
+def apply_slide_background(
+    prs, slide, colors: ColorPalette, bg_image: Path | None = None
+):
     if bg_image is not None:
         add_image_background(prs, slide, bg_image)
     else:

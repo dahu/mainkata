@@ -6,6 +6,8 @@ from pptx.dml.color import RGBColor
 from pptx.oxml.xmlchemy import OxmlElement
 from pptx.util import Pt
 
+from mainkata.config import FontSpec
+
 
 def set_shape_fill_transparency(shape, transparency: float) -> None:
     if not 0.0 <= transparency <= 1.0:
@@ -33,7 +35,7 @@ def set_shape_fill_transparency(shape, transparency: float) -> None:
     color_node.append(alpha)
 
 
-def apply_font(run, font_spec: dict[str, Any], color: RGBColor) -> None:
+def apply_font(run, font_spec: FontSpec, color: RGBColor) -> None:
     run.font.name = font_spec["name"]
     run.font.size = Pt(font_spec["size"])
     run.font.bold = font_spec["bold"]
@@ -53,7 +55,7 @@ def fit_font_size(text: str) -> int:
     return 20
 
 
-def resolve_vocab_primary_font(base_font: dict[str, Any], text: str) -> dict[str, Any]:
+def resolve_vocab_primary_font(base_font: FontSpec, text: str) -> FontSpec:
     resolved = dict(base_font)
     resolved["size"] = fit_font_size(text)
     return resolved

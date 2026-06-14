@@ -4,12 +4,14 @@ from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
+from mainkata.config import ColorPalette, TitleSlideStyle, VocabSlideStyle
+
 from .backgrounds import add_soft_overlay, apply_slide_background
 from .theme import (apply_font, resolve_vocab_primary_font,
                     set_shape_fill_transparency)
 
 
-def add_title_card(slide, colors):
+def add_title_card(slide, colors: ColorPalette):
     card = slide.shapes.add_shape(
         MSO_AUTO_SHAPE_TYPE.ROUNDED_RECTANGLE,
         Inches(0.7),
@@ -30,7 +32,7 @@ def add_title_slide(
     section_title: str,
     source_name: str,
     labels,
-    style,
+    style: TitleSlideStyle,
     bg_image=None,
 ):
     colors = style["colors"]
@@ -107,7 +109,7 @@ def add_vocab_slide(
     prs,
     primary_text: str,
     secondary_text: str | None,
-    style,
+    style: VocabSlideStyle,
     bg_image=None,
 ):
     colors = style["colors"]

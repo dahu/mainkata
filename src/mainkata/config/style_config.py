@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from pptx.dml.color import RGBColor
 
@@ -11,6 +11,41 @@ try:
     import tomllib
 except ModuleNotFoundError:
     import tomli as tomllib
+
+
+class FontSpec(TypedDict):
+    name: str
+    size: int
+    bold: bool
+
+
+class ColorPalette(TypedDict):
+    bg: RGBColor
+    blue: RGBColor
+    text: RGBColor
+    subtext: RGBColor
+    coral: RGBColor
+    white: RGBColor
+
+
+class TitleSlideStyle(TypedDict):
+    colors: ColorPalette
+    pill_font: FontSpec
+    main_font: FontSpec
+    section_font: FontSpec
+    body_font: FontSpec
+    overlay_transparency: float
+    show_card: bool
+    card_transparency: float
+
+
+class VocabSlideStyle(TypedDict):
+    colors: ColorPalette
+    primary_font: FontSpec
+    secondary_font: FontSpec
+    overlay_transparency: float
+    show_card: bool
+    card_transparency: float
 
 
 DEFAULT_STYLE_CONFIG: dict[str, Any] = {
@@ -111,19 +146,6 @@ def load_style_config(style_config_file: str | Path | None = None) -> dict[str, 
     return deep_merge_dicts(DEFAULT_STYLE_CONFIG, loaded)
 
 
-# def hex_to_rgb_color(value: str) -> RGBColor:
-#     text = value.strip().lstrip("#")
-#     if len(text) != 6:
-#         raise ValueError(f"Invalid hex color value: {value!r}")
-#     try:
-#         r = int(text[0:2], 16)
-#         g = int(text[2:4], 16)
-#         b = int(text[4:6], 16)
-#         return RGBColor(r, g, b)
-#     except ValueError as exc:
-#         raise ValueError(f"Invalid hex color value: {value!r}") from exc
-
-
 def hex_to_rgb_color(value: str) -> RGBColor:
     text = value.strip().lstrip("#")
     if len(text) != 6:
@@ -136,7 +158,7 @@ def hex_to_rgb_color(value: str) -> RGBColor:
 
 def resolve_color_palette(
     style_config: dict[str, Any], palette_name: str
-) -> dict[str, RGBColor]:
+) -> ColorPalette:
     palettes = style_config["palettes"]["colors"]
     if palette_name not in palettes:
         raise ValueError(f"Unknown color palette: {palette_name}")
@@ -145,9 +167,7 @@ def resolve_color_palette(
     }
 
 
-def resolve_font_palette(
-    style_config: dict[str, Any], font_name: str
-) -> dict[str, Any]:
+def resolve_font_palette(style_config: dict[str, Any], font_name: str) -> FontSpec:
     palettes = style_config["palettes"]["fonts"]
     if font_name not in palettes:
         raise ValueError(f"Unknown font palette: {font_name}")
@@ -159,7 +179,7 @@ def resolve_font_palette(
     }
 
 
-def resolve_title_slide_style(style_config: dict[str, Any]) -> dict[str, Any]:
+def resolve_title_slide_style(style_config: dict[str, Any]) -> TitleSlideStyle:
     style = style_config["styles"]["title_slide"]
     return {
         "colors": resolve_color_palette(style_config, style["color_palette"]),
@@ -173,7 +193,7 @@ def resolve_title_slide_style(style_config: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def resolve_vocab_slide_style(style_config: dict[str, Any]) -> dict[str, Any]:
+def resolve_vocab_slide_style(style_config: dict[str, Any]) -> VocabSlideStyle:
     style = style_config["styles"]["vocab_slide"]
     return {
         "colors": resolve_color_palette(style_config, style["color_palette"]),
