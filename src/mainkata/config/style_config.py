@@ -193,3 +193,31 @@ def resolve_vocab_slide_style(style_config: dict[str, Any]) -> dict[str, Any]:
         "show_card": bool(style["show_card"]),
         "card_transparency": float(style["card_transparency"]),
     }
+
+
+def resolve_effective_slide_styles(
+    style_config: Dict[str, Any],
+    title_slide_overlay_transparency: float | None = None,
+    vocab_slide_overlay_transparency: float | None = None,
+    show_title_card: bool | None = None,
+    title_card_transparency: float | None = None,
+    show_vocab_card: bool | None = None,
+    vocab_card_transparency: float | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    title_style = resolve_title_slide_style(style_config)
+    vocab_style = resolve_vocab_slide_style(style_config)
+
+    if title_slide_overlay_transparency is not None:
+        title_style["overlay_transparency"] = title_slide_overlay_transparency
+    if vocab_slide_overlay_transparency is not None:
+        vocab_style["overlay_transparency"] = vocab_slide_overlay_transparency
+    if show_title_card is not None:
+        title_style["show_card"] = show_title_card
+    if title_card_transparency is not None:
+        title_style["card_transparency"] = title_card_transparency
+    if show_vocab_card is not None:
+        vocab_style["show_card"] = show_vocab_card
+    if vocab_card_transparency is not None:
+        vocab_style["card_transparency"] = vocab_card_transparency
+
+    return title_style, vocab_style
