@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from mainkata.domain import BackgroundOptions, GenerationOptions, VisualOptions
-from mainkata.services.generator import (generate_from_inputs,
-                                         resolve_output_path)
+from mainkata.io import resolve_output_path
+from mainkata.services.generator import generate_from_inputs
 
 
 class VocabPptxGui(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("Mainkata: Term-Definition PPTX Generator")
+        self.title("Mainkata Term-Definition PPTX Generator")
         self.geometry("860x1080")
         self.minsize(820, 900)
 
@@ -22,7 +21,7 @@ class VocabPptxGui(tk.Tk):
         self.output_var = tk.StringVar()
         self.style_config_var = tk.StringVar()
 
-        self.sets_var = tk.StringVar(value="6")
+        self.set_count_var = tk.StringVar(value="6")
         self.set_size_var = tk.StringVar(value="10")
         self.seed_var = tk.StringVar(value="42")
         self.primary_side_var = tk.StringVar(value="term")
@@ -37,7 +36,6 @@ class VocabPptxGui(tk.Tk):
 
         self.override_title_slide_overlay_var = tk.BooleanVar(value=False)
         self.title_slide_overlay_transparency_var = tk.StringVar(value="0.22")
-
         self.override_vocab_slide_overlay_var = tk.BooleanVar(value=False)
         self.vocab_slide_overlay_transparency_var = tk.StringVar(value="0.22")
 
@@ -53,9 +51,9 @@ class VocabPptxGui(tk.Tk):
 
         self.status_var = tk.StringVar(value="Choose a CSV file to begin.")
 
-        self._build_ui()
+        self.build_ui()
 
-    def _build_ui(self) -> None:
+    def build_ui(self) -> None:
         root = ttk.Frame(self, padding=16)
         root.pack(fill="both", expand=True)
         root.columnconfigure(1, weight=1)
@@ -66,7 +64,7 @@ class VocabPptxGui(tk.Tk):
         ttk.Entry(root, textvariable=self.csv_path_var).grid(
             row=0, column=1, sticky="ew", pady=8
         )
-        ttk.Button(root, text="Browse…", command=self.choose_csv).grid(
+        ttk.Button(root, text="Browse", command=self.choose_csv).grid(
             row=0, column=2, sticky="ew", pady=8
         )
 
@@ -76,26 +74,26 @@ class VocabPptxGui(tk.Tk):
         ttk.Entry(root, textvariable=self.output_var).grid(
             row=1, column=1, sticky="ew", pady=8
         )
-        ttk.Button(root, text="Save as…", command=self.choose_output).grid(
+        ttk.Button(root, text="Save as", command=self.choose_output).grid(
             row=1, column=2, sticky="ew", pady=8
         )
 
-        ttk.Label(root, text="Style config (TOML)").grid(
+        ttk.Label(root, text="Style config TOML").grid(
             row=2, column=0, sticky="w", padx=(0, 10), pady=8
         )
         ttk.Entry(root, textvariable=self.style_config_var).grid(
             row=2, column=1, sticky="ew", pady=8
         )
-        ttk.Button(root, text="Browse…", command=self.choose_style_config).grid(
+        ttk.Button(root, text="Browse", command=self.choose_style_config).grid(
             row=2, column=2, sticky="ew", pady=8
         )
 
         ttk.Label(root, text="Sets").grid(
             row=3, column=0, sticky="w", padx=(0, 10), pady=8
         )
-        ttk.Spinbox(root, from_=1, to=999, textvariable=self.sets_var, width=10).grid(
-            row=3, column=1, sticky="w", pady=8
-        )
+        ttk.Spinbox(
+            root, from_=1, to=999, textvariable=self.set_count_var, width=10
+        ).grid(row=3, column=1, sticky="w", pady=8)
 
         ttk.Label(root, text="Set size").grid(
             row=4, column=0, sticky="w", padx=(0, 10), pady=8
@@ -137,7 +135,7 @@ class VocabPptxGui(tk.Tk):
 
         ttk.Checkbutton(
             root,
-            text="Generate selected_terms CSV",
+            text="Generate selected-terms CSV",
             variable=self.export_selected_terms_var,
         ).grid(row=8, column=0, columnspan=3, sticky="w", pady=6)
 
@@ -149,7 +147,7 @@ class VocabPptxGui(tk.Tk):
         ttk.Entry(root, textvariable=self.background_dir_var).grid(
             row=10, column=1, sticky="ew", pady=8
         )
-        ttk.Button(root, text="Browse…", command=self.choose_background_dir).grid(
+        ttk.Button(root, text="Browse", command=self.choose_background_dir).grid(
             row=10, column=2, sticky="ew", pady=8
         )
 
@@ -159,13 +157,13 @@ class VocabPptxGui(tk.Tk):
         self.background_mode_combo = ttk.Combobox(
             root,
             textvariable=self.background_mode_var,
-            values=["cycle", "fixed"],
+            values=("cycle", "fixed"),
             state="readonly",
             width=12,
         )
         self.background_mode_combo.grid(row=11, column=1, sticky="w", pady=8)
         self.background_mode_combo.bind(
-            "<<ComboboxSelected>>", self._on_background_mode_changed
+            "<<ComboboxSelected>>", self.on_background_mode_changed
         )
 
         ttk.Label(root, text="Fixed image number").grid(
@@ -185,7 +183,6 @@ class VocabPptxGui(tk.Tk):
         )
         cycle_frame = ttk.Frame(root)
         cycle_frame.grid(row=13, column=1, columnspan=2, sticky="w", pady=8)
-
         self.cycle_start_spinbox = ttk.Spinbox(
             cycle_frame,
             from_=1,
@@ -194,9 +191,7 @@ class VocabPptxGui(tk.Tk):
             width=8,
         )
         self.cycle_start_spinbox.pack(side="left")
-
         ttk.Label(cycle_frame, text="to").pack(side="left", padx=8)
-
         self.cycle_end_spinbox = ttk.Spinbox(
             cycle_frame,
             from_=1,
@@ -216,37 +211,33 @@ class VocabPptxGui(tk.Tk):
             root,
             text="Override title-slide overlay transparency",
             variable=self.override_title_slide_overlay_var,
-            command=self._on_style_override_toggle,
+            command=self.on_style_override_toggle,
         ).grid(row=16, column=0, columnspan=2, sticky="w", pady=4)
-        self.title_slide_overlay_transparency_entry = ttk.Entry(
+        self.title_slide_overlay_entry = ttk.Entry(
             root,
             textvariable=self.title_slide_overlay_transparency_var,
             width=10,
         )
-        self.title_slide_overlay_transparency_entry.grid(
-            row=16, column=2, sticky="w", pady=4
-        )
+        self.title_slide_overlay_entry.grid(row=16, column=2, sticky="w", pady=4)
 
         ttk.Checkbutton(
             root,
             text="Override vocab-slide overlay transparency",
             variable=self.override_vocab_slide_overlay_var,
-            command=self._on_style_override_toggle,
+            command=self.on_style_override_toggle,
         ).grid(row=17, column=0, columnspan=2, sticky="w", pady=4)
-        self.vocab_slide_overlay_transparency_entry = ttk.Entry(
+        self.vocab_slide_overlay_entry = ttk.Entry(
             root,
             textvariable=self.vocab_slide_overlay_transparency_var,
             width=10,
         )
-        self.vocab_slide_overlay_transparency_entry.grid(
-            row=17, column=2, sticky="w", pady=4
-        )
+        self.vocab_slide_overlay_entry.grid(row=17, column=2, sticky="w", pady=4)
 
         ttk.Checkbutton(
             root,
             text="Override title card visibility",
             variable=self.override_title_card_var,
-            command=self._on_style_override_toggle,
+            command=self.on_style_override_toggle,
         ).grid(row=18, column=0, columnspan=2, sticky="w", pady=4)
         self.show_title_card_checkbutton = ttk.Checkbutton(
             root,
@@ -259,7 +250,7 @@ class VocabPptxGui(tk.Tk):
             root,
             text="Override title card transparency",
             variable=self.override_title_card_transparency_var,
-            command=self._on_style_override_toggle,
+            command=self.on_style_override_toggle,
         ).grid(row=19, column=0, columnspan=2, sticky="w", pady=4)
         self.title_card_transparency_entry = ttk.Entry(
             root,
@@ -272,7 +263,7 @@ class VocabPptxGui(tk.Tk):
             root,
             text="Override vocab card visibility",
             variable=self.override_vocab_card_var,
-            command=self._on_style_override_toggle,
+            command=self.on_style_override_toggle,
         ).grid(row=20, column=0, columnspan=2, sticky="w", pady=4)
         self.show_vocab_card_checkbutton = ttk.Checkbutton(
             root,
@@ -285,7 +276,7 @@ class VocabPptxGui(tk.Tk):
             root,
             text="Override vocab card transparency",
             variable=self.override_vocab_card_transparency_var,
-            command=self._on_style_override_toggle,
+            command=self.on_style_override_toggle,
         ).grid(row=21, column=0, columnspan=2, sticky="w", pady=4)
         self.vocab_card_transparency_entry = ttk.Entry(
             root,
@@ -295,23 +286,29 @@ class VocabPptxGui(tk.Tk):
         self.vocab_card_transparency_entry.grid(row=21, column=2, sticky="w", pady=4)
 
         help_text = (
-            "CSV must contain Term and Definition headers.\n"
-            "Header matching is case-insensitive, and one CSV file is processed at a time.\n"
-            "The file must also contain enough unique rows for the selected set size.\n\n"
+            "CSV must contain Term and Definition headers. Header matching is case-insensitive, "
+            "and one CSV file is processed at a time. The file must also contain enough unique rows "
+            "for the selected set size.\n\n"
             "Optional style config: choose a TOML file to define visual defaults.\n"
-            "Style override checkboxes let you override only selected values in the GUI.\n"
-            "Unchecked style override fields pass None to the generator so config/defaults apply.\n\n"
-            "Optional background folder: if one image is present it is used for all slides;\n"
-            "otherwise choose fixed or cycle mode. In cycle mode, leave the range blank to\n"
-            "cycle through all images, or provide both start and end image numbers.\n\n"
-            "Transparency values must be between 0.0 (opaque) and 1.0 (fully transparent)."
+            "Style override checkboxes let you override only selected values in the GUI. "
+            "Unchecked style override fields pass None to the generator so TOML/config defaults apply.\n\n"
+            "Optional background folder: if one image is present it is used for all slides; otherwise choose fixed or cycle mode. "
+            "In cycle mode, leave the range blank to cycle through all images, or provide both start and end image numbers."
         )
         ttk.Label(root, text=help_text, justify="left").grid(
-            row=22, column=0, columnspan=3, sticky="w", pady=(12, 8)
+            row=22,
+            column=0,
+            columnspan=3,
+            sticky="w",
+            pady=(12, 8),
         )
 
         ttk.Button(root, text="Generate PPTX", command=self.generate).grid(
-            row=23, column=0, columnspan=3, sticky="ew", pady=(8, 12)
+            row=23,
+            column=0,
+            columnspan=3,
+            sticky="ew",
+            pady=(8, 12),
         )
 
         ttk.Label(root, text="Status").grid(row=24, column=0, sticky="nw", pady=(4, 6))
@@ -327,10 +324,10 @@ class VocabPptxGui(tk.Tk):
         self.log = tk.Text(status_frame, height=10, wrap="word", state="disabled")
         self.log.grid(row=1, column=0, sticky="nsew")
 
-        self._on_background_mode_changed()
-        self._on_style_override_toggle()
+        self.on_background_mode_changed()
+        self.on_style_override_toggle()
 
-    def _require_int(self, value: str, field_name: str) -> int:
+    def require_int(self, value: str, field_name: str) -> int:
         text = value.strip()
         if not text:
             raise ValueError(f"{field_name} is required.")
@@ -339,7 +336,7 @@ class VocabPptxGui(tk.Tk):
         except ValueError as exc:
             raise ValueError(f"{field_name} must be a whole number.") from exc
 
-    def _optional_int(self, value: str, field_name: str) -> int | None:
+    def optional_int(self, value: str, field_name: str) -> int | None:
         text = value.strip()
         if not text:
             return None
@@ -348,7 +345,7 @@ class VocabPptxGui(tk.Tk):
         except ValueError as exc:
             raise ValueError(f"{field_name} must be a whole number.") from exc
 
-    def _require_float(self, value: str, field_name: str) -> float:
+    def require_float(self, value: str, field_name: str) -> float:
         text = value.strip()
         if not text:
             raise ValueError(f"{field_name} is required.")
@@ -357,29 +354,10 @@ class VocabPptxGui(tk.Tk):
         except ValueError as exc:
             raise ValueError(f"{field_name} must be a number.") from exc
 
-    def _validate_inputs(
+    def collect_inputs(
         self,
     ) -> tuple[
-        str,
-        str | None,
-        str | None,
-        int,
-        int,
-        int,
-        str,
-        bool,
-        bool,
-        str | None,
-        str,
-        int | None,
-        int | None,
-        int | None,
-        float | None,
-        float | None,
-        bool | None,
-        float | None,
-        bool | None,
-        float | None,
+        str, str | None, str | None, GenerationOptions, BackgroundOptions, VisualOptions
     ]:
         csv_file = self.csv_path_var.get().strip()
         if not csv_file:
@@ -388,146 +366,95 @@ class VocabPptxGui(tk.Tk):
         output = self.output_var.get().strip() or None
         style_config_file = self.style_config_var.get().strip() or None
 
-        set_count = self._require_int(self.sets_var.get(), "Sets")
-        set_size = self._require_int(self.set_size_var.get(), "Set size")
-        seed = self._require_int(self.seed_var.get(), "Seed")
-        primary_side = self.primary_side_var.get().strip()
-        show_alternate = self.show_alternate_var.get()
-        export_selected_terms = self.export_selected_terms_var.get()
+        generation = GenerationOptions(
+            set_count=self.require_int(self.set_count_var.get(), "Sets"),
+            set_size=self.require_int(self.set_size_var.get(), "Set size"),
+            seed=self.require_int(self.seed_var.get(), "Seed"),
+            primary_side=self.primary_side_var.get().strip(),
+            show_alternate=self.show_alternate_var.get(),
+            export_selected_terms=self.export_selected_terms_var.get(),
+        )
 
         background_dir = self.background_dir_var.get().strip() or None
-        background_mode = self.background_mode_var.get().strip() or "cycle"
-        background_image_number = self._optional_int(
-            self.background_image_number_var.get(),
-            "Fixed image number",
+        background = BackgroundOptions(
+            background_dir=background_dir,
+            background_mode=self.background_mode_var.get().strip() or "cycle",
+            background_image_number=self.optional_int(
+                self.background_image_number_var.get(),
+                "Fixed image number",
+            ),
+            background_cycle_start=self.optional_int(
+                self.background_cycle_start_var.get(),
+                "Cycle start image number",
+            ),
+            background_cycle_end=self.optional_int(
+                self.background_cycle_end_var.get(),
+                "Cycle end image number",
+            ),
         )
-        background_cycle_start = self._optional_int(
-            self.background_cycle_start_var.get(),
-            "Cycle start image number",
-        )
-        background_cycle_end = self._optional_int(
-            self.background_cycle_end_var.get(),
-            "Cycle end image number",
-        )
-
-        title_slide_overlay_transparency = None
-        if self.override_title_slide_overlay_var.get():
-            title_slide_overlay_transparency = self._require_float(
-                self.title_slide_overlay_transparency_var.get(),
-                "Title-slide overlay transparency",
-            )
-            if not 0.0 <= title_slide_overlay_transparency <= 1.0:
-                raise ValueError(
-                    "Title-slide overlay transparency must be between 0.0 and 1.0."
-                )
-
-        vocab_slide_overlay_transparency = None
-        if self.override_vocab_slide_overlay_var.get():
-            vocab_slide_overlay_transparency = self._require_float(
-                self.vocab_slide_overlay_transparency_var.get(),
-                "Vocab-slide overlay transparency",
-            )
-            if not 0.0 <= vocab_slide_overlay_transparency <= 1.0:
-                raise ValueError(
-                    "Vocab-slide overlay transparency must be between 0.0 and 1.0."
-                )
-
-        show_title_card = (
-            self.show_title_card_var.get()
-            if self.override_title_card_var.get()
-            else None
-        )
-
-        title_card_transparency = None
-        if self.override_title_card_transparency_var.get():
-            title_card_transparency = self._require_float(
-                self.title_card_transparency_var.get(),
-                "Title card transparency",
-            )
-            if not 0.0 <= title_card_transparency <= 1.0:
-                raise ValueError("Title card transparency must be between 0.0 and 1.0.")
-
-        show_vocab_card = (
-            self.show_vocab_card_var.get()
-            if self.override_vocab_card_var.get()
-            else None
-        )
-
-        vocab_card_transparency = None
-        if self.override_vocab_card_transparency_var.get():
-            vocab_card_transparency = self._require_float(
-                self.vocab_card_transparency_var.get(),
-                "Vocab card transparency",
-            )
-            if not 0.0 <= vocab_card_transparency <= 1.0:
-                raise ValueError("Vocab card transparency must be between 0.0 and 1.0.")
-
-        if set_count < 1:
-            raise ValueError("Sets must be at least 1.")
-        if set_size < 1:
-            raise ValueError("Set size must be at least 1.")
-        if primary_side not in {"term", "definition"}:
-            raise ValueError("Large text shows must be either Term or Definition.")
-        if background_mode not in {"fixed", "cycle"}:
-            raise ValueError("Background mode must be either fixed or cycle.")
-
-        if style_config_file:
-            style_config_path = Path(style_config_file).expanduser().resolve()
-            if not style_config_path.exists():
-                raise FileNotFoundError(
-                    f"Style config file not found:\n{style_config_path}"
-                )
-            if not style_config_path.is_file():
-                raise ValueError(
-                    f"Style config path is not a file:\n{style_config_path}"
-                )
 
         if background_dir is None:
-            background_image_number = None
-            background_cycle_start = None
-            background_cycle_end = None
+            background = BackgroundOptions()
 
-        return (
-            csv_file,
-            output,
-            style_config_file,
-            set_count,
-            set_size,
-            seed,
-            primary_side,
-            show_alternate,
-            export_selected_terms,
-            background_dir,
-            background_mode,
-            background_image_number,
-            background_cycle_start,
-            background_cycle_end,
-            title_slide_overlay_transparency,
-            vocab_slide_overlay_transparency,
-            show_title_card,
-            title_card_transparency,
-            show_vocab_card,
-            vocab_card_transparency,
+        visual = VisualOptions(
+            title_slide_overlay_transparency=(
+                self.require_float(
+                    self.title_slide_overlay_transparency_var.get(),
+                    "Title-slide overlay transparency",
+                )
+                if self.override_title_slide_overlay_var.get()
+                else None
+            ),
+            vocab_slide_overlay_transparency=(
+                self.require_float(
+                    self.vocab_slide_overlay_transparency_var.get(),
+                    "Vocab-slide overlay transparency",
+                )
+                if self.override_vocab_slide_overlay_var.get()
+                else None
+            ),
+            show_title_card=(
+                self.show_title_card_var.get()
+                if self.override_title_card_var.get()
+                else None
+            ),
+            title_card_transparency=(
+                self.require_float(
+                    self.title_card_transparency_var.get(),
+                    "Title card transparency",
+                )
+                if self.override_title_card_transparency_var.get()
+                else None
+            ),
+            show_vocab_card=(
+                self.show_vocab_card_var.get()
+                if self.override_vocab_card_var.get()
+                else None
+            ),
+            vocab_card_transparency=(
+                self.require_float(
+                    self.vocab_card_transparency_var.get(),
+                    "Vocab card transparency",
+                )
+                if self.override_vocab_card_transparency_var.get()
+                else None
+            ),
         )
 
-    def _validate_output_path(self, csv_file: str, output: str | None) -> Path:
+        return csv_file, output, style_config_file, generation, background, visual
+
+    def validate_output_path(self, csv_file: str, output: str | None) -> Path:
         csv_path = Path(csv_file).expanduser().resolve()
         output_path = resolve_output_path(csv_path, output)
 
         if output_path.exists() and output_path.is_dir():
             raise ValueError(
-                f"Output path is a folder, not a .pptx file:\n{output_path}"
+                f"Output path is a folder, not a .pptx file: {output_path}"
             )
-
-        parent = output_path.parent
-        if not parent.exists():
-            raise ValueError(f"Output folder does not exist:\n{parent}")
-        if not os.access(parent, os.W_OK):
-            raise PermissionError(f"Output folder is not writable:\n{parent}")
 
         return output_path
 
-    def _on_background_mode_changed(self, event=None) -> None:
+    def on_background_mode_changed(self, event=None) -> None:
         mode = self.background_mode_var.get().strip() or "cycle"
         has_dir = bool(self.background_dir_var.get().strip())
 
@@ -538,13 +465,13 @@ class VocabPptxGui(tk.Tk):
         self.cycle_start_spinbox.configure(state=cycle_state)
         self.cycle_end_spinbox.configure(state=cycle_state)
 
-    def _on_style_override_toggle(self) -> None:
-        self.title_slide_overlay_transparency_entry.configure(
+    def on_style_override_toggle(self) -> None:
+        self.title_slide_overlay_entry.configure(
             state="normal"
             if self.override_title_slide_overlay_var.get()
             else "disabled"
         )
-        self.vocab_slide_overlay_transparency_entry.configure(
+        self.vocab_slide_overlay_entry.configure(
             state="normal"
             if self.override_vocab_slide_overlay_var.get()
             else "disabled"
@@ -573,12 +500,17 @@ class VocabPptxGui(tk.Tk):
         )
         if not filename:
             return
+
         self.csv_path_var.set(filename)
+
         if not self.output_var.get().strip():
-            output_path = resolve_output_path(Path(filename))
+            output_path = resolve_output_path(
+                Path(filename).expanduser().resolve(), None
+            )
             self.output_var.set(str(output_path))
+
         self.status_var.set("CSV file selected.")
-        self._append_log(f"CSV: {filename}")
+        self.append_log(f"CSV: {filename}")
 
     def choose_output(self) -> None:
         initial = self.output_var.get().strip()
@@ -591,9 +523,10 @@ class VocabPptxGui(tk.Tk):
         )
         if not filename:
             return
+
         self.output_var.set(filename)
         self.status_var.set("Output file selected.")
-        self._append_log(f"Output: {filename}")
+        self.append_log(f"Output: {filename}")
 
     def choose_style_config(self) -> None:
         initial = self.style_config_var.get().strip()
@@ -604,9 +537,10 @@ class VocabPptxGui(tk.Tk):
         )
         if not filename:
             return
+
         self.style_config_var.set(filename)
         self.status_var.set("Style config file selected.")
-        self._append_log(f"Style config: {filename}")
+        self.append_log(f"Style config: {filename}")
 
     def choose_background_dir(self) -> None:
         initial = self.background_dir_var.get().strip()
@@ -617,186 +551,144 @@ class VocabPptxGui(tk.Tk):
         )
         if not dirname:
             return
+
         self.background_dir_var.set(dirname)
         self.status_var.set("Background folder selected.")
-        self._append_log(f"Background folder: {dirname}")
-        self._on_background_mode_changed()
+        self.append_log(f"Background folder: {dirname}")
+        self.on_background_mode_changed()
 
     def generate(self) -> None:
         self.status_var.set("Validating inputs...")
+
         try:
             (
                 csv_file,
                 output,
                 style_config_file,
-                set_count,
-                set_size,
-                seed,
-                primary_side,
-                show_alternate,
-                export_selected_terms,
-                background_dir,
-                background_mode,
-                background_image_number,
-                background_cycle_start,
-                background_cycle_end,
-                title_slide_overlay_transparency,
-                vocab_slide_overlay_transparency,
-                show_title_card,
-                title_card_transparency,
-                show_vocab_card,
-                vocab_card_transparency,
-            ) = self._validate_inputs()
+                generation,
+                background,
+                visual,
+            ) = self.collect_inputs()
+            output_path = self.validate_output_path(csv_file, output)
 
-            output_path = self._validate_output_path(csv_file, output)
-
-            files_to_overwrite = []
+            files_to_overwrite: list[Path] = []
             if output_path.exists():
                 files_to_overwrite.append(output_path)
 
-            if export_selected_terms:
+            if generation.export_selected_terms:
                 csv_out_path = output_path.with_name(
-                    output_path.stem + "_selected_terms.csv"
+                    f"{output_path.stem}_selectedterms.csv"
                 )
                 if csv_out_path.exists():
                     files_to_overwrite.append(csv_out_path)
 
             if files_to_overwrite:
-                message = "The following file(s) already exist:\n\n"
-                message += "\n".join(str(p) for p in files_to_overwrite)
+                message = "The following files already exist:\n\n"
+                message += "\n".join(str(path) for path in files_to_overwrite)
                 message += "\n\nDo you want to overwrite them?"
                 ok = messagebox.askyesno(
-                    "Overwrite existing files?",
-                    message,
-                    parent=self,
+                    "Overwrite existing files?", message, parent=self
                 )
                 if not ok:
                     self.status_var.set("Generation cancelled.")
-                    self._append_log("Cancelled: output file already exists.")
+                    self.append_log("Cancelled: output file already exists.")
                     return
 
             self.status_var.set("Generating PPTX...")
-            self._append_log(f"Generating: {output_path}")
+            self.append_log(f"Generating: {output_path}")
 
             if style_config_file:
-                self._append_log(f"Style config: {style_config_file}")
+                self.append_log(f"Style config: {style_config_file}")
 
-            if background_dir:
-                self._append_log(f"Background folder: {background_dir}")
-                self._append_log(f"Background mode: {background_mode}")
-                if title_slide_overlay_transparency is not None:
-                    self._append_log(
-                        "Title-slide overlay transparency override: "
-                        f"{title_slide_overlay_transparency}"
+            if background.background_dir:
+                self.append_log(f"Background folder: {background.background_dir}")
+                self.append_log(f"Background mode: {background.background_mode}")
+
+                if (
+                    background.background_mode == "fixed"
+                    and background.background_image_number is not None
+                ):
+                    self.append_log(
+                        f"Fixed background image number: {background.background_image_number}"
                     )
-                if vocab_slide_overlay_transparency is not None:
-                    self._append_log(
-                        "Vocab-slide overlay transparency override: "
-                        f"{vocab_slide_overlay_transparency}"
-                    )
-                if background_mode == "fixed" and background_image_number is not None:
-                    self._append_log(
-                        f"Fixed background image number: {background_image_number}"
-                    )
-                elif background_mode == "cycle":
+                elif background.background_mode == "cycle":
                     if (
-                        background_cycle_start is not None
-                        and background_cycle_end is not None
+                        background.background_cycle_start is not None
+                        and background.background_cycle_end is not None
                     ):
-                        self._append_log(
+                        self.append_log(
                             "Cycle background image range: "
-                            f"{background_cycle_start} to {background_cycle_end}"
+                            f"{background.background_cycle_start} to {background.background_cycle_end}"
                         )
                     else:
-                        self._append_log("Cycle background image range: all images")
+                        self.append_log("Cycle background image range: all images")
 
-            if show_title_card is not None:
-                self._append_log(f"Show title card override: {show_title_card}")
-            if title_card_transparency is not None:
-                self._append_log(
-                    f"Title card transparency override: {title_card_transparency}"
+            if visual.title_slide_overlay_transparency is not None:
+                self.append_log(
+                    "Title-slide overlay transparency override: "
+                    f"{visual.title_slide_overlay_transparency}"
                 )
-
-            if show_vocab_card is not None:
-                self._append_log(f"Show vocab card override: {show_vocab_card}")
-            if vocab_card_transparency is not None:
-                self._append_log(
-                    f"Vocab card transparency override: {vocab_card_transparency}"
+            if visual.vocab_slide_overlay_transparency is not None:
+                self.append_log(
+                    "Vocab-slide overlay transparency override: "
+                    f"{visual.vocab_slide_overlay_transparency}"
+                )
+            if visual.show_title_card is not None:
+                self.append_log(f"Show title card override: {visual.show_title_card}")
+            if visual.title_card_transparency is not None:
+                self.append_log(
+                    f"Title card transparency override: {visual.title_card_transparency}"
+                )
+            if visual.show_vocab_card is not None:
+                self.append_log(f"Show vocab card override: {visual.show_vocab_card}")
+            if visual.vocab_card_transparency is not None:
+                self.append_log(
+                    f"Vocab card transparency override: {visual.vocab_card_transparency}"
                 )
 
             pptx_path, csv_out = generate_from_inputs(
                 csv_file=csv_file,
                 output=str(output_path),
                 style_config_file=style_config_file,
-                generation=GenerationOptions(
-                    set_count=set_count,
-                    set_size=set_size,
-                    seed=seed,
-                    primary_side=primary_side,
-                    show_alternate=show_alternate,
-                    export_selected_terms=export_selected_terms,
-                ),
-                background=BackgroundOptions(
-                    background_dir=background_dir,
-                    background_mode=background_mode,
-                    background_image_number=background_image_number,
-                    background_cycle_start=background_cycle_start,
-                    background_cycle_end=background_cycle_end,
-                ),
-                visual=VisualOptions(
-                    title_slide_overlay_transparency=title_slide_overlay_transparency,
-                    vocab_slide_overlay_transparency=vocab_slide_overlay_transparency,
-                    show_title_card=show_title_card,
-                    title_card_transparency=title_card_transparency,
-                    show_vocab_card=show_vocab_card,
-                    vocab_card_transparency=vocab_card_transparency,
-                ),
+                generation=generation,
+                background=background,
+                visual=visual,
             )
 
             self.status_var.set("Generation complete.")
-            self._append_log(f"Created: {pptx_path}")
+            self.append_log(f"Created: {pptx_path}")
             if csv_out:
-                self._append_log(f"Created: {csv_out}")
-                done_message = f"Created:\n{pptx_path}\n\nCreated:\n{csv_out}"
+                self.append_log(f"Created: {csv_out}")
+                done_message = f"Created:\n{pptx_path}\n{csv_out}"
             else:
                 done_message = f"Created:\n{pptx_path}"
-            messagebox.showinfo("Done", done_message)
+
+            messagebox.showinfo("Done", done_message, parent=self)
 
         except ValueError as exc:
             self.status_var.set("Please fix the input values.")
-            self._append_log(f"Validation error: {exc}")
+            self.append_log(f"Validation error: {exc}")
             messagebox.showerror("Check your inputs", str(exc), parent=self)
-
         except PermissionError as exc:
             self.status_var.set("Cannot write to the selected output location.")
-            self._append_log(f"Permission error: {exc}")
-            messagebox.showerror(
-                "Output location not writable",
-                str(exc),
-                parent=self,
-            )
-
+            self.append_log(f"Permission error: {exc}")
+            messagebox.showerror("Output location not writable", str(exc), parent=self)
         except FileNotFoundError as exc:
             self.status_var.set("Input file not found.")
-            self._append_log(f"File error: {exc}")
-            messagebox.showerror(
-                "File not found",
-                str(exc),
-                parent=self,
-            )
-
+            self.append_log(f"File error: {exc}")
+            messagebox.showerror("File not found", str(exc), parent=self)
         except Exception as exc:
             self.status_var.set("Generation failed.")
-            self._append_log(f"Unexpected error: {exc}")
+            self.append_log(f"Unexpected error: {exc}")
             messagebox.showerror(
                 "Generation failed",
-                "Something went wrong while creating the PowerPoint.\n"
+                "Something went wrong while creating the PowerPoint. "
                 "Please check the CSV file, style config file, background folder, "
                 "and output location, then try again.",
                 parent=self,
             )
 
-    def _append_log(self, message: str) -> None:
+    def append_log(self, message: str) -> None:
         self.log.configure(state="normal")
         self.log.insert("end", message + "\n")
         self.log.see("end")
