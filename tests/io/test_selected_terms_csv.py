@@ -1,39 +1,55 @@
+import csv
 from pathlib import Path
 
 from mainkata.io.selected_terms_csv import write_selected_terms_csv
 
 
-def test_write_selected_terms_csv_writes_expected_file(tmp_path: Path) -> None:
-    output_path = tmp_path / "deck.pptx"
-    output_path.write_text("placeholder", encoding="utf-8")
+def test_write_selected_terms_csv_creates_expected_filename(tmp_path: Path) -> None:
+    output_path = tmp_path / "lesson_vocab_sets.pptx"
 
-    rows = [
-        (1, "apple", "a fruit"),
-        (2, "table", "a piece of furniture"),
-    ]
+    csv_path = write_selected_terms_csv(
+        output_path,
+        rows=[(1, "CPU", "Central Processing Unit")],
+    )
 
-    csv_path = write_selected_terms_csv(output_path, rows)
-
-    assert csv_path == tmp_path / "deck_selected_terms.csv"
+    assert csv_path == tmp_path / "lesson_vocab_sets_selected_terms.csv"
     assert csv_path.exists()
 
-    content = csv_path.read_text(encoding="utf-8").splitlines()
-    assert content == [
-        "set_number,term,definition",
-        "1,apple,a fruit",
-        "2,table,a piece of furniture",
+
+def test_write_selected_terms_csv_writes_header_and_rows(tmp_path: Path) -> None:
+    output_path = tmp_path / "lesson_vocab_sets.pptx"
+
+    csv_path = write_selected_terms_csv(
+        output_path,
+        rows=[
+            (1, "CPU", "Central Processing Unit"),
+            (2, "RAM", "Random Access Memory"),
+        ],
+    )
+
+    with csv_path.open("r", encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        contents = list(reader)
+
+    assert contents == [
+        ["set_number", "term", "definition"],
+        ["1", "CPU", "Central Processing Unit"],
+        ["2", "RAM", "Random Access Memory"],
     ]
 
 
-def test_write_selected_terms_csv_writes_header_only_for_empty_rows(
-    tmp_path: Path,
-) -> None:
-    output_path = tmp_path / "deck.pptx"
-    output_path.write_text("placeholder", encoding="utf-8")
+def test_write_selected_terms_csv_overwrites_existing_file(tmp_path: Path) -> None:
+    output_path = tmp_path / "lesson_vocab_sets.pptx"
+    existing_csv = tmp_path / "lesson_vocab_sets_selected_terms.csv"
+    existing_csv.write_text("old,data\n", encoding="utf-8")
 
-    csv_path = write_selected_terms_csv(output_path, [])
+    csv_path = write_selected_terms_csv(
+        output_path,
+        rows=[(3, "GPU", "Graphics Processing Unit")],
+    )
 
-    assert csv_path.exists()
+    assert csv_path == existing_csv
     assert csv_path.read_text(encoding="utf-8").splitlines() == [
         "set_number,term,definition",
+        "3,GPU,Graphics Processing Unit",
     ]
