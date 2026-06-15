@@ -2,11 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from mainkata.io.paths import (
-    resolve_background_dir,
-    resolve_csv_path,
-    resolve_output_path,
-)
+from mainkata.io.paths import (resolve_background_dir, resolve_csv_path,
+                               resolve_output_path)
 
 
 def test_resolve_csv_path_returns_existing_file(tmp_path: Path) -> None:
@@ -69,5 +66,5 @@ def test_resolve_background_dir_raises_if_not_directory(tmp_path: Path) -> None:
     not_dir = tmp_path / "file.txt"
     not_dir.write_text("not a directory", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="Background path is not a directory:"):
+    with pytest.raises(ValueError, match="Background directory is not a directory:"):
         resolve_background_dir(not_dir)

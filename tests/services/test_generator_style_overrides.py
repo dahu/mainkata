@@ -67,11 +67,21 @@ def test_generate_from_inputs_calls_dependencies_and_passes_expected_arguments(
 
     def fake_resolve_title_slide_style(style_config):
         captured["resolve_title_slide_style"] = style_config
-        return {"kind": "title-style"}
+        return {
+            "kind": "title-style",
+            "overlay_transparency": 0.2,
+            "card_transparency": 0.1,
+            "show_card": True,
+        }
 
     def fake_resolve_vocab_slide_style(style_config):
         captured["resolve_vocab_slide_style"] = style_config
-        return {"kind": "vocab-style"}
+        return {
+            "kind": "vocab-style",
+            "overlay_transparency": 0.3,
+            "card_transparency": 0.15,
+            "show_card": False,
+        }
 
     def fake_read_vocab_csv(path, min_rows):
         captured["read_vocab_csv"] = (path, min_rows)
@@ -173,25 +183,34 @@ def test_generate_from_inputs_calls_dependencies_and_passes_expected_arguments(
 
     assert captured["build_background_pool"] is background
 
-    assert captured["build_pptx"] == {
-        "csv_path": csv_path,
-        "output_path": output_path,
-        "sets": [
-            [("inu", "dog"), ("neko", "cat"), ("tori", "bird")],
-            [("sakana", "fish"), ("inu", "dog"), ("neko", "cat")],
-        ],
-        "labels": {
-            "game_title": "Vocabulary Games",
-            "source_prefix": "Source:",
-            "set_prefix": "Set",
-            "vocabulary_suffix": "Vocabulary",
-        },
-        "title_style": {"kind": "title-style"},
-        "vocab_style": {"kind": "vocab-style"},
-        "generation": generation,
-        "background": background,
-        "visual": visual,
-        "bg_pool": [Path("bg1.jpg"), Path("bg2.jpg")],
+    build_kwargs = captured["build_pptx"]
+    assert build_kwargs["csv_path"] == csv_path
+    assert build_kwargs["output_path"] == output_path
+    assert build_kwargs["sets"] == [
+        [("inu", "dog"), ("neko", "cat"), ("tori", "bird")],
+        [("sakana", "fish"), ("inu", "dog"), ("neko", "cat")],
+    ]
+    assert build_kwargs["labels"] == {
+        "game_title": "Vocabulary Games",
+        "source_prefix": "Source:",
+        "set_prefix": "Set",
+        "vocabulary_suffix": "Vocabulary",
+    }
+    assert build_kwargs["generation"] == generation
+    assert build_kwargs["background"] == background
+    assert build_kwargs["bg_pool"] == [Path("bg1.jpg"), Path("bg2.jpg")]
+
+    assert build_kwargs["title_style"] == {
+        "kind": "title-style",
+        "overlay_transparency": 0.5,
+        "card_transparency": 0.1,
+        "show_card": False,
+    }
+    assert build_kwargs["vocab_style"] == {
+        "kind": "vocab-style",
+        "overlay_transparency": 0.3,
+        "card_transparency": 0.4,
+        "show_card": True,
     }
 
 
@@ -215,12 +234,22 @@ def test_generate_from_inputs_uses_generation_set_size_as_csv_min_rows(
     monkeypatch.setattr(
         generator,
         "resolve_title_slide_style",
-        lambda _: {"kind": "title-style"},
+        lambda _: {
+            "kind": "title-style",
+            "overlay_transparency": 0.2,
+            "card_transparency": 0.1,
+            "show_card": True,
+        },
     )
     monkeypatch.setattr(
         generator,
         "resolve_vocab_slide_style",
-        lambda _: {"kind": "vocab-style"},
+        lambda _: {
+            "kind": "vocab-style",
+            "overlay_transparency": 0.3,
+            "card_transparency": 0.15,
+            "show_card": True,
+        },
     )
 
     def fake_read_vocab_csv(path, min_rows):
@@ -242,7 +271,7 @@ def test_generate_from_inputs_uses_generation_set_size_as_csv_min_rows(
     assert captured["read_vocab_csv"] == (csv_path, 5)
 
 
-def test_generate_from_inputs_passes_visual_options_through_to_builder(
+def test_generate_from_inputs_applies_visual_options_to_styles_before_builder(
     monkeypatch,
     tmp_path: Path,
 ) -> None:
@@ -262,19 +291,30 @@ def test_generate_from_inputs_passes_visual_options_through_to_builder(
     monkeypatch.setattr(
         generator,
         "resolve_title_slide_style",
-        lambda _: {"kind": "title-style"},
+        lambda _: {
+            "kind": "title-style",
+            "overlay_transparency": 0.2,
+            "card_transparency": 0.1,
+            "show_card": True,
+        },
     )
     monkeypatch.setattr(
         generator,
         "resolve_vocab_slide_style",
-        lambda _: {"kind": "vocab-style"},
+        lambda _: {
+            "kind": "vocab-style",
+            "overlay_transparency": 0.3,
+            "card_transparency": 0.15,
+            "show_card": False,
+        },
     )
     monkeypatch.setattr(generator, "read_vocab_csv", lambda *a, **k: [("inu", "dog")])
     monkeypatch.setattr(generator, "random_sets", lambda *a, **k: [[("inu", "dog")]])
     monkeypatch.setattr(generator, "build_background_pool", lambda *_: [])
 
     def fake_build_pptx(**kwargs):
-        captured["visual"] = kwargs["visual"]
+        captured["title_style"] = kwargs["title_style"]
+        captured["vocab_style"] = kwargs["vocab_style"]
         return output_path, None
 
     monkeypatch.setattr(generator, "build_pptx", fake_build_pptx)
@@ -293,4 +333,15 @@ def test_generate_from_inputs_passes_visual_options_through_to_builder(
         visual=visual,
     )
 
-    assert captured["visual"] is visual
+    assert captured["title_style"] == {
+        "kind": "title-style",
+        "overlay_transparency": 0.55,
+        "card_transparency": 0.11,
+        "show_card": False,
+    }
+    assert captured["vocab_style"] == {
+        "kind": "vocab-style",
+        "overlay_transparency": 0.25,
+        "card_transparency": 0.44,
+        "show_card": True,
+    }

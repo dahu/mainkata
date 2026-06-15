@@ -150,7 +150,7 @@ def test_generate_from_inputs_orchestrates_dependencies_and_returns_outputs(
     assert build_kwargs["sets"] == [[("inu", "dog")]]
     assert build_kwargs["generation"] == generation
     assert build_kwargs["background"] == background
-    assert build_kwargs["visual"] == visual
+    # visual is now applied into styles, not passed through
     assert build_kwargs["bg_pool"] == [Path("bg1.jpg")]
     assert build_kwargs["title_style"]["style_name"] == "title"
     assert build_kwargs["vocab_style"]["style_name"] == "vocab"
@@ -228,4 +228,4 @@ def test_generate_from_inputs_handles_defaults_and_empty_background_pool(
     assert calls["build_pptx"]["bg_pool"] == []
     assert calls["build_pptx"]["generation"] == generation
     assert calls["build_pptx"]["background"] == background
-    assert calls["build_pptx"]["visual"] == visual
+    # visual is not forwarded any more; it is applied into styles up front

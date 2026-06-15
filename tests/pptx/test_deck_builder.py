@@ -9,8 +9,7 @@ from pptx import Presentation
 from mainkata.config.style_config import (DEFAULT_STYLE_CONFIG,
                                           resolve_title_slide_style,
                                           resolve_vocab_slide_style)
-from mainkata.domain.options import (BackgroundOptions, GenerationOptions,
-                                     VisualOptions)
+from mainkata.domain.options import BackgroundOptions, GenerationOptions
 from mainkata.pptx.deck_builder import build_pptx
 
 
@@ -63,10 +62,6 @@ def make_background() -> BackgroundOptions:
     return BackgroundOptions()
 
 
-def make_visual() -> VisualOptions:
-    return VisualOptions()
-
-
 def make_sets() -> list[list[tuple[str, str]]]:
     return [
         [
@@ -96,7 +91,7 @@ def test_build_pptx_creates_output_file_and_expected_slide_count(tmp_path: Path)
 
     labels, title_style, vocab_style = make_styles()
 
-    pptx_out, csv_out = build_pptx(
+    result = build_pptx(
         csv_path=csv_path,
         output_path=output_path,
         sets=make_multi_sets(),
@@ -105,13 +100,12 @@ def test_build_pptx_creates_output_file_and_expected_slide_count(tmp_path: Path)
         vocab_style=vocab_style,
         generation=make_generation(set_count=2, set_size=2),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 
-    assert pptx_out == output_path
+    assert result.pptx_path == output_path
     assert output_path.exists()
-    assert csv_out is None
+    assert result.selected_terms_csv_path is None
 
     prs = Presentation(output_path)
     assert len(prs.slides) == 6  # 2 sets * (1 title + 2 vocab)
@@ -133,7 +127,6 @@ def test_build_pptx_adds_one_title_slide_per_set(tmp_path: Path):
         vocab_style=vocab_style,
         generation=make_generation(set_count=2, set_size=2),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 
@@ -151,7 +144,7 @@ def test_build_pptx_exports_selected_terms_csv_when_requested(tmp_path: Path):
 
     labels, title_style, vocab_style = make_styles()
 
-    pptx_out, csv_out = build_pptx(
+    result = build_pptx(
         csv_path=csv_path,
         output_path=output_path,
         sets=make_sets(),
@@ -164,16 +157,15 @@ def test_build_pptx_exports_selected_terms_csv_when_requested(tmp_path: Path):
             export_selected_terms=True,
         ),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 
-    assert pptx_out.exists()
-    assert csv_out is not None
-    assert csv_out.exists()
+    assert result.pptx_path.exists()
+    assert result.selected_terms_csv_path is not None
+    assert result.selected_terms_csv_path.exists()
 
-    rows = csv_rows(csv_out)
-    assert rows[0] == ["set_number", "term", "definition"]
+    rows = csv_rows(result.selected_terms_csv_path)
+    assert rows[0] == ["Set", "Term", "Definition"]
     assert rows[1] == ["1", "cat", "a small domesticated feline"]
     assert rows[2] == ["1", "dog", "a domesticated canine"]
 
@@ -199,7 +191,6 @@ def test_build_pptx_uses_term_as_primary_and_definition_as_secondary(tmp_path: P
             show_alternate=True,
         ),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 
@@ -231,7 +222,6 @@ def test_build_pptx_uses_definition_as_primary_and_term_as_secondary(tmp_path: P
             show_alternate=True,
         ),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 
@@ -263,7 +253,6 @@ def test_build_pptx_omits_secondary_text_when_show_alternate_is_false(tmp_path: 
             show_alternate=False,
         ),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 
@@ -290,7 +279,6 @@ def test_build_pptx_uses_csv_filename_on_title_slide(tmp_path: Path):
         vocab_style=vocab_style,
         generation=make_generation(set_count=1, set_size=2),
         background=make_background(),
-        visual=make_visual(),
         bg_pool=[],
     )
 

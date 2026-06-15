@@ -21,7 +21,7 @@ def write_selected_terms_csv(
 
     with csv_out.open("w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["set_number", "term", "definition"])
+        writer.writerow(["Set", "Term", "Definition"])
         writer.writerows(rows)
 
     return csv_out

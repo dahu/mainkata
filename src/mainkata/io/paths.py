@@ -24,5 +24,5 @@ def resolve_background_dir(background_dir: str | Path) -> Path:
     if not bg_dir.exists():
         raise FileNotFoundError(f"Background directory not found: {bg_dir}")
     if not bg_dir.is_dir():
-        raise ValueError(f"Background path is not a directory: {bg_dir}")
+        raise ValueError(f"Background directory is not a directory: {bg_dir}")
     return bg_dir

@@ -32,7 +32,7 @@ def test_write_selected_terms_csv_writes_header_and_rows(tmp_path: Path) -> None
         contents = list(reader)
 
     assert contents == [
-        ["set_number", "term", "definition"],
+        ["Set", "Term", "Definition"],
         ["1", "CPU", "Central Processing Unit"],
         ["2", "RAM", "Random Access Memory"],
     ]
@@ -50,6 +50,6 @@ def test_write_selected_terms_csv_overwrites_existing_file(tmp_path: Path) -> No
 
     assert csv_path == existing_csv
     assert csv_path.read_text(encoding="utf-8").splitlines() == [
-        "set_number,term,definition",
+        "Set,Term,Definition",
         "3,GPU,Graphics Processing Unit",
     ]
