@@ -1,178 +1,93 @@
-# Mainkata - A Term-Definition PPTX Generator
+# Mainkata
 
-Mainkata generates PowerPoint vocabulary or content-review decks from a CSV file with two columns: `Term` and `Definition`.
+Mainkata generates classroom vocabulary PowerPoint slide decks from a simple CSV file.
 
-It provides:
+It is designed for teachers who want a quick way to create vocabulary games and revision slides without manually building each slide in PowerPoint.
 
-- a command-line interface: `mainkata`
-- a desktop GUI: `mainkata-gui`
+## Features
 
-## CSV format
+- Create PowerPoint decks from a CSV with `Term` and `Definition` columns.
+- Generate multiple randomised sets from one source file.
+- Choose whether the primary slide text is the term or the definition.
+- Optionally hide the alternate side.
+- Export a companion CSV of selected terms.
+- Use built-in backgrounds or your own image backgrounds.
+- Apply optional style settings from a TOML config file.
+- Launch from either the command line or the GUI.
 
-Your CSV must include these two headers, case-insensitive:
+## Install
+
+### Recommended: pipx
+
+```bash
+pipx install mainkata
+```
+
+This is the easiest way to install Mainkata as an app-like tool without managing a separate virtual environment.
+
+### Alternative: pip
+
+```bash
+pip install mainkata
+```
+
+## Quick start
+
+Create a CSV file like this:
 
 ```csv
 Term,Definition
-anggota,member
-antri,to queue/line up
+Algorithm,A step-by-step procedure for solving a problem
+Variable,A named value that can change in a program
+Loop,A structure that repeats instructions
+Function,A reusable block of code
 ```
 
-Mainkata reads one CSV file at a time and requires enough unique rows to satisfy the selected set size.
-
-## Installation
-
-### Requirements
-
-- Python 3.10 or newer
-- Git, if installing directly from GitHub
-- PowerPoint is **not** required to generate `.pptx` files
-
-### Recommended: install with pipx
-
-`pipx` is the easiest way to install Mainkata as an app. It creates an isolated Python environment for the program and makes the `mainkata` and `mainkata-gui` commands available in your terminal.
-
-### Linux
-
-1. Install Python 3 and Git if they are not already installed.
-2. Install `pipx`:
+Then run:
 
 ```bash
-python3 -m pip install --user pipx
-python3 -m pipx ensurepath
+mainkata my_vocab.csv
 ```
 
-3. Restart your terminal.
-4. Install Mainkata from GitHub:
+This creates a PowerPoint deck based on your CSV file.
+
+## Common usage
+
+Generate 6 sets of 10 slides:
 
 ```bash
-pipx install "git+https://github.com/dahu/mainkata"
+mainkata my_vocab.csv --sets 6 --set-size 10
 ```
 
-### macOS quick start (for non-technical users)
-
-1. Install Python 3 from [python.org](https://www.python.org/downloads/macos/) using the macOS installer.
-2. Open the Terminal app and run:
-
-   ```bash
-   python3 -m pip install --user pipx
-   python3 -m pipx ensurepath
-   ```
-
-   Then close and reopen Terminal.
-
-3. Install Mainkata:
-
-   ```bash
-   pipx install "git+https://github.com/dahu/mainkata"
-   ```
-
-4. Launch the desktop app:
-
-   ```bash
-   mainkata-gui
-   ```
-
-### macOS
-
-If you use Homebrew:
+Use definitions as the main slide text:
 
 ```bash
-brew install pipx
-pipx ensurepath
-pipx install "git+https://github.com/dahu/mainkata"
+mainkata my_vocab.csv --primary-side definition
 ```
 
-Or with Python only:
+Hide the alternate text:
 
 ```bash
-python3 -m pip install --user pipx
-python3 -m pipx ensurepath
-pipx install "git+https://github.com/dahu/mainkata"
+mainkata my_vocab.csv --hide-alternate
 ```
 
-Restart Terminal if `pipx` or `mainkata` is not found immediately.
-
-### Windows 11
-
-1. Install Python and ensure the Python Launcher (`py`) is available.
-2. Open **PowerShell**.
-3. Install `pipx`:
-
-```powershell
-py -m pip install --user pipx
-py -m pipx ensurepath
-```
-
-4. Close and reopen PowerShell.
-5. Install Mainkata from GitHub:
-
-```powershell
-pipx install "git+https://github.com/dahu/mainkata"
-```
-
-## Run Mainkata
-
-### Command-line app
-
-Generate a deck from a CSV file:
+Export a selected-terms CSV as well:
 
 ```bash
-mainkata topic_1.csv
+mainkata my_vocab.csv --export-selected-terms
 ```
 
-This creates:
-
-- `topic_1_vocab_sets.pptx`
-
-Specify the output filename:
+Use a custom style config:
 
 ```bash
-mainkata topic_1.csv -o topic1_games.pptx
+mainkata my_vocab.csv --style-config ~/config/mainkata/style.toml
 ```
 
-Change the randomisation seed:
+Use a folder of background images:
 
 ```bash
-mainkata topic_1.csv --seed 99
+mainkata my_vocab.csv --background-dir ./backgrounds
 ```
-
-Adjust the number and size of sets:
-
-```bash
-mainkata topic_1.csv --sets 6 --set-size 10
-```
-
-Generate the companion selected-terms CSV:
-
-```bash
-mainkata topic_1.csv --export-selected-terms
-```
-
-Show definitions in large text instead of terms:
-
-```bash
-mainkata topic_1.csv --primary-side definition
-```
-
-Hide the alternate side from slides:
-
-```bash
-mainkata topic_1.csv --hide-alternate
-```
-
-Overwrite existing output files without prompting:
-
-```bash
-mainkata topic_1.csv --force
-```
-
-See all options:
-
-```bash
-mainkata --help
-```
-
-### Desktop GUI
 
 Launch the GUI:
 
@@ -180,87 +95,62 @@ Launch the GUI:
 mainkata-gui
 ```
 
-The GUI lets you:
+## CSV format
 
-- choose the input CSV file
-- choose the output PPTX filename
-- set `Sets`, `Set size`, and `Seed`
-- choose whether large text shows `Term` or `Definition`
-- choose whether the alternate side is shown in smaller text
-- choose whether to generate the companion selected-terms CSV
-- generate the PPTX without using the command line
+Your CSV file must include these headers:
 
-## Tkinter note
+- `Term`
+- `Definition`
 
-The GUI uses Tkinter. Tkinter is included with many Python installations, but not all.
+Header matching is case-insensitive.
 
-If `mainkata-gui` fails because Tkinter is missing:
+Blank rows are ignored. Incomplete rows are rejected. Duplicate term-definition pairs are removed before slide generation.
 
-- Ubuntu/Debian: install `python3-tk`
-- Fedora: install `python3-tkinter`
-- macOS: the Python.org installer usually includes a working Tkinter setup
-- Windows: the standard Python.org installer typically includes Tkinter
+## Style config
 
-Quick test:
+Mainkata can load an optional TOML style configuration file.
 
-```bash
-python3 -c "import tkinter; tkinter._test()"
-```
+If no explicit `--style-config` file is given, Mainkata can look for:
 
-On Windows:
+- `$XDG_CONFIG_HOME/mainkata/style.toml`
+- `~/.config/mainkata/style.toml`
 
-```powershell
-py -c "import tkinter; tkinter._test()"
-```
+If no config file is found, built-in defaults are used.
 
-## Upgrade
+## Who it is for
 
-If installed with `pipx`:
+Mainkata is especially useful for:
 
-```bash
-pipx upgrade mainkata
-```
+- classroom teachers
+- learning support teachers
+- teacher aides
+- homeschool educators
+- tutors
 
-## Uninstall
+## Requirements
+
+- Python 3.10 or newer
+
+## Development
+
+Build the package:
 
 ```bash
-pipx uninstall mainkata
+python -m build
 ```
 
-## Install from source
-
-Use this if you want to clone the repository and run Mainkata locally.
-
-### Linux / macOS
+Run tests:
 
 ```bash
-git clone https://github.com/dahu/mainkata
-cd mainkata
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install .
+pytest
 ```
 
-### Windows 11
-
-```powershell
-git clone https://github.com/dahu/mainkata
-cd mainkata
-py -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install .
-```
-
-Then run:
+Upload to TestPyPI:
 
 ```bash
-mainkata --help
+python -m twine upload --repository testpypi dist/*
 ```
 
-or:
+## License
 
-```bash
-mainkata-gui
-```
+MIT

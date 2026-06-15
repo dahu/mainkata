@@ -1,15 +1,52 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "mainkata"
 version = "0.1.0"
-description = "Generate classroom game slides from CSV rows."
+description = "Generate classroom vocabulary PowerPoint slide decks from CSV files."
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Barry Arthur" }
+]
+keywords = [
+  "education",
+  "teaching",
+  "classroom",
+  "vocabulary",
+  "powerpoint",
+  "pptx",
+  "slides",
+  "csv",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Education",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Education",
+  "Topic :: Office/Business :: Office Suites",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
 dependencies = [
+  "Pillow",
   "python-pptx",
+  'tomli; python_version < "3.11"',
+]
+
+[project.optional-dependencies]
+dev = [
+  "build",
+  "pytest",
+  "twine",
 ]
 
 [project.scripts]
@@ -17,3 +54,18 @@ mainkata = "mainkata.cli:main"
 
 [project.gui-scripts]
 mainkata-gui = "mainkata.gui:main"
+
+[project.urls]
+Homepage = "https://github.com/dahu/mainkata"
+Repository = "https://github.com/dahu/mainkata"
+Issues = "https://github.com/dahu/mainkata/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
